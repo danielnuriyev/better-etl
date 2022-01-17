@@ -27,6 +27,8 @@ This project is not based on Dagster. It is named Data Dagster because it is all
 
 ## Design
 
+![design](./images/design.png)
+
 ## Roadmap
 
 ## Status
