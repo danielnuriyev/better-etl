@@ -50,4 +50,7 @@ This diagram shows several things:
 
 ## Status
 
+## Set up
 
+- Install Python 3
+- Run `. ./setup.sh`
