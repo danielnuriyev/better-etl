@@ -1,0 +1,9 @@
+{
+  "install_requires": [
+  ],
+  "extras_require": {
+    "mysql": [
+      "mysql-connector==2.2.9"
+    ]
+  }
+}
