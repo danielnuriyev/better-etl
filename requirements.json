@@ -1,5 +1,6 @@
 {
   "install_requires": [
+    "python-crontab"
   ],
   "extras_require": {
     "mysql": [
