@@ -29,6 +29,23 @@ This project is not based on Dagster. It is named Data Dagster because it is all
 
 ![design](./images/design.png)
 
+This diagram shows several things:
+
+- A pipeline step can output 4 types of data:
+  - status: status of the step such as success or failure.
+  - data: raw data in any format.
+  - metadata: description of the data, such as its format.
+  - message: a message from this step for the next steps
+- A condition step used for routing messages
+- Examples of steps: data source, condition, transformation, output, notification, sending message to another pipeline
+- Data Dagster infrastructure consists of 
+  - a unified logging layer and a control module for controlling all pipelines
+  - API layer on top of controller and logging. The API serves to communicate with Data Dagster.
+  - UI for monitoring and controlling Data Dagster. The UI uses the API to communicate with the logging and controller.
+  - SDK that uses the API to communicate with the logging and controller.
+  - CLI on top of the SDK to communicate with the logging and controller.
+  - Code that uses the SDK to communicate with the logging and controller.
+
 ## Roadmap
 
 ## Status
