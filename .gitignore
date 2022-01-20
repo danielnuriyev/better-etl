@@ -1,3 +1,5 @@
 .idea
 .venv
+*.sqlite
+src/__pycache__/
 src/datadagster.egg-info

@@ -1,6 +1,7 @@
 {
   "install_requires": [
-    "python-crontab"
+    "apscheduler",
+    "sqlalchemy"
   ],
   "extras_require": {
     "mysql": [
