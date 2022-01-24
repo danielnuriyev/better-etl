@@ -1,16 +1,22 @@
+
 from apscheduler.executors.pool import ProcessPoolExecutor, ThreadPoolExecutor
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.schedulers.background import BackgroundScheduler, BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+import logging
+
 from multiprocessing import cpu_count
 
 from pytz import utc
 
+# logger = logging.getLogger(__name__)
+logging.basicConfig()
+logging.getLogger('apscheduler').setLevel(logging.INFO)
+
 class Scheduler:
+
     def __init__(self):
-
-
 
         # multiprocessing + local slite is just for testing
         cores = cpu_count()
@@ -29,12 +35,13 @@ class Scheduler:
             "jobstores": jobstores,
             "executors": executors,
             "job_defaults": job_defaults,
-            "timezone": utc
+            "timezone": utc,
+            # "logger": logger
         }
         scheduler = BackgroundScheduler(gconfig=conf)  # TODO: cluster, cloud
-        # scheduler.configure(jobstores=jobstores, executors=executors, timezone=utc, job_defaults=job_defaults)
         scheduler.start()
         self._scheduler = scheduler
+
 
     def schedule(self, cron, f, kwargs): # TODO: cluster, cloud
         self._scheduler.add_job(f, CronTrigger.from_crontab(cron), kwargs=kwargs)
