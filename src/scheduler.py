@@ -7,8 +7,6 @@ from multiprocessing import cpu_count
 
 from pytz import utc
 
-from step import Step
-
 class Scheduler:
     def __init__(self):
 
@@ -38,6 +36,6 @@ class Scheduler:
         scheduler.start()
         self._scheduler = scheduler
 
-    def schedule(self, cron, f): # TODO: cluster, cloud
-        self._scheduler.add_job(f, CronTrigger.from_crontab(cron))
+    def schedule(self, cron, f, kwargs): # TODO: cluster, cloud
+        self._scheduler.add_job(f, CronTrigger.from_crontab(cron), kwargs=kwargs)
 
