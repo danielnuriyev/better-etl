@@ -1,4 +1,4 @@
-# Data Dagster
+# Better ETL
 
 ## Goal
 
@@ -6,7 +6,7 @@ The goal is to create a specification and a sample implementation for piping and
 
 ## Why
 
-None of the current open source and commercial products provides the full set of features of Data Dagster. 
+None of the current open source and commercial products provides the full set of features of Better ETL. 
 
 ## Features
 
@@ -20,10 +20,6 @@ None of the current open source and commercial products provides the full set of
 - Scheduler.
 - Persistence: data coming into a pipeline step is persisted until successfully output into a next step.
 - Centralized logging. This allows centralized monitoring.
-
-## Name
-
-This project is not based on Dagster. It is named Data Dagster because it is allows composition of data DAGs. 
 
 ## Design
 
