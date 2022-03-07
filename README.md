@@ -21,6 +21,8 @@ None of the current open source and commercial products provides the full set of
 - Persistence: data coming into a pipeline step is persisted until successfully output into a next step.
 - Centralized logging. This allows centralized monitoring.
 
+[Here](./etl-features.pdf) is another mosr specific list of featuers.
+
 ## Design
 
 ![design](./images/design.png)
