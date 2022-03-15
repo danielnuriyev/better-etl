@@ -21,7 +21,7 @@ None of the current open source and commercial products provides the full set of
 - Persistence: data coming into a pipeline step is persisted until successfully output into a next step.
 - A step can output data, metadata, status, message, event. Even listener can start a DAG.
 - A step that has multiple following steps can serve as a condition clause. (named outputs/connections/links)
-- If a step outputs a collection, the following steps process the elements one by one (fanning out)
+- Map/reduce
 - Centralized logging. This allows centralized monitoring.
 
 [Here](./etl-features.pdf) is another mosr specific list of featuers.
