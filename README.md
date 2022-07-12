@@ -24,7 +24,7 @@ None of the current open source and commercial products provides the full set of
 - Map/reduce
 - Centralized logging. This allows centralized monitoring.
 
-[Here](./etl-features.pdf) is another mosr specific list of featuers.
+[Here](./etl-features.pdf) is another more specific list of featuers.
 
 ## Design
 

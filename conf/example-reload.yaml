@@ -1,0 +1,36 @@
+name: example-reload
+# after: name of another job
+execution: sequential # sequential | all
+cron: 0 0 * * *
+# interval: 1 second | minute | hour | day | week
+persistence: memory # memory | local | s3
+steps:
+  - name: get-source-mysql-creds
+    action: get_aws_secret
+    parameters:
+      secret_name: analytics-simplisafe_LIVE
+  - name: extract
+    after: get-source-mysql-creds
+    action: extract_db_batch
+    parameters:
+      client: mysql
+      host: ss-live-analytics.mariadb.prd.ss42.net
+      port: 3306
+      database: simplisafe_LIVE
+      table: ast_call_log
+      batch: 1000000
+      mode: reload
+  - name: validate
+    after: extract
+    action: dummy_validate
+  - name: transform
+    after: validate
+    action: dummy_transform
+  - name: load
+    after: transform
+    action: load_onto_s3
+    parameters:
+      bucket: ss-bi-datalake-dev
+      path: daniel/{date}
+      format: parquet
+      size: 256M

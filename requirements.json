@@ -1,8 +1,9 @@
 {
   "install_requires": [
     "apscheduler",
-    "sqlalchemy",
     "fastapi",
+    "pyyaml",
+    "sqlalchemy",
     "uvicorn[standard]"
   ],
   "extras_require": {
