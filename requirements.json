@@ -1,10 +1,10 @@
 {
   "install_requires": [
-    "apscheduler",
-    "fastapi",
+    "boto3",
+    "dagit",
+    "dagster",
     "pyyaml",
-    "sqlalchemy",
-    "uvicorn[standard]"
+    "sqlalchemy"
   ],
   "extras_require": {
     "mysql": [

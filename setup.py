@@ -5,7 +5,7 @@ with open("requirements.json") as fp:
     requirements = json.load(fp)
 
 setuptools.setup(
-    name="datadagster",
+    name="better_etl",
     version="0.0.1",
     description="",
     long_description="",

@@ -1,5 +1,8 @@
+.dagster
 .idea
 .venv
+*.egg-info
 *.sqlite
-src/__pycache__/
+__pycache__
 src/datadagster.egg-info
+test.yaml
