@@ -3,6 +3,8 @@
     "boto3",
     "dagit",
     "dagster",
+    "pandas",
+    "psutil",
     "pyyaml",
     "sqlalchemy"
   ],
