@@ -15,4 +15,4 @@ export DAGSTER_HOME=$(pwd)/.dagster
 cp dagster.yaml .dagster/dagster.yaml
 
 # dagster-daemon run &
-# dagit -w workspace.yaml --config test.yaml
+# dagit -w workspace.yaml

@@ -6,9 +6,10 @@ import time
 import mysql.connector
 import pandas as pd
 
+from better_etl.caches import Cache
 from better_etl.sources.source import Source
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 class MySQLSource(Source):
 
@@ -20,11 +21,13 @@ class MySQLSource(Source):
                  unique_keys=None,
                  unique_keys_min_values=None,
                  columns="*",
-                 limit=100000,
+                 limit=1000000,
                  sleep=0,
                  max_sleep = 15 * 60,
                  stream=False,
                  schema=None,
+                 logger=_logger,
+                 cache=Cache(),
                  **kwargs):
 
         """
@@ -33,7 +36,8 @@ class MySQLSource(Source):
         :param kwargs: param names come from here: https://dev.mysql.com/doc/connector-python/en/connector-python-connectargs.html
         """
 
-        logger.info(f"Source {time.time()}")
+        self.logger=logger
+        self.logger.info(f"Source {time.time()}")
         self._created = time.time()
 
         self.__dict__.update(kwargs)
@@ -47,8 +51,13 @@ class MySQLSource(Source):
         self.max_sleep = max_sleep
         self.stream = stream
         self.schema = schema
+        self.cache = cache
         self._con = None
         self._cache_key = f"{self.host}:{self.port}/{self.database}/{self.table}"
+
+        if self.start_keys is not None:
+            self.cache.put(self._cache_key, self.start_keys)
+
 
     def _connect(self):
         if not self._con:
@@ -58,7 +67,7 @@ class MySQLSource(Source):
         return self._con
 
     def close(self):
-        logger.info(f"Source {time.time()} CLOSING")
+        self.logger.info(f"Source {time.time()} CLOSING")
         if self._con:
             self._con.close()
 
@@ -68,7 +77,7 @@ class MySQLSource(Source):
             cur.execute(f"SHOW columns FROM {self.database}.{self.table}")
             return cur.fetchall()
         except Exception as e:
-            logger.error(f"Failed: {e}")
+            self.logger.error(f"Failed: {e}")
             raise e
         finally:
             cur.close()
@@ -84,12 +93,12 @@ class MySQLSource(Source):
         return self.unique_keys
 
     def get_last_keys(self):
-        logger.info(f"Cache: {self.cache}")
+        self.logger.info(f"Cache: {self.cache}")
         return self.cache.get(self._cache_key)
 
     def next_batch(self):
 
-        logger.info(f"Source {time.time()} START")
+        self.logger.info(f"Source {time.time()} START")
 
         select = f"SELECT {self.columns} FROM {self.database}.{self.table}"
         keys = self.primary_keys()
@@ -102,7 +111,7 @@ class MySQLSource(Source):
             if keys:
 
                 previous_keys = self.get_last_keys()
-                logger.info(f"previous_keys: {previous_keys}")
+                self.logger.info(f"previous_keys: {previous_keys}")
 
                 if previous_keys:
                     where = "WHERE"
@@ -119,7 +128,7 @@ class MySQLSource(Source):
                 order_by = f"ORDER BY {order_keys}"
 
             else:
-                logger.warn("No unique keys")
+                self.logger.warn("No unique keys")
                 where = ""
                 order_by = ""
 
@@ -127,7 +136,7 @@ class MySQLSource(Source):
                 limit = f"LIMIT {self.limit}"
 
             query = f"{select} {where} {order_by} {limit}"
-            logger.info(query)
+            self.logger.info(query)
 
             retry = 1
             while retry:
@@ -136,12 +145,12 @@ class MySQLSource(Source):
                     rows = cur.fetchall()
                     retry = 0
                 except BaseException as e: # TODO: which exceptions indicate the need to retry
-                    logger.error(e)
-                    logger.info(f"Retrying in {retry} seconds")
+                    self.logger.error(e)
+                    self.logger.info(f"Retrying in {retry} seconds")
                     time.sleep(retry)
                     retry += 1
 
-            logger.info(f"Fetched {len(rows)} rows")
+            self.logger.info(f"Fetched {len(rows)} rows")
 
             if len(rows) > 0:
                 if self.schema:
@@ -169,14 +178,14 @@ class MySQLSource(Source):
                                 found = True
                                 break
                         if found:
-                            logger.info(f"put last keys: {last_keys}")
+                            self.logger.info(f"put last keys: {last_keys}")
                             self.cache.put(self._cache_key, last_keys)
                         else:
-                            logger.warn("Exiting: unique keys in this batch are not greater than in the previous batch")
+                            self.logger.warn("Exiting: unique keys in this batch are not greater than in the previous batch")
                             next = False
                     else:
                         tmp = 2
-                        logger.info(f"put last keys: {last_keys}")
+                        self.logger.info(f"put last keys: {last_keys}")
                         self.cache.put(self._cache_key, last_keys)
 
                 #
@@ -197,7 +206,7 @@ class MySQLSource(Source):
             pid = os.getpid()
             process = psutil.Process(pid)
             memory = process.memory_info().rss
-            logger.info(f'Memory: {"{:,}".format(memory)}')
+            self.logger.info(f'Memory: {"{:,}".format(memory)}')
 
             if not self.stream and next and self.sleep:
                 time.sleep(self.sleep)
@@ -214,11 +223,11 @@ class MySQLSource(Source):
                     else:
                         retry += 1
                     if sleep:
-                        logger.info(f"Sleeping for {sleep} seconds")
+                        self.logger.info(f"Sleeping for {sleep} seconds")
                         time.sleep(sleep)
                 """
 
-            if self.stream:
-                next = False
+            # if self.stream:
+                # next = False
 
-        logger.info("Finished")
+        self.logger.info("Finished")

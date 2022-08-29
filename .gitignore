@@ -6,4 +6,4 @@
 *.sqlite
 __pycache__
 src/datadagster.egg-info
-test.yaml
+local.yaml

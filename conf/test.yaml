@@ -1,0 +1,22 @@
+name: test_job
+ops:
+  - name: get_aws_secret
+    action: get_aws_secret
+    config:
+      secret_name: <name of a secret>
+  - name: extract_db_batch
+    after:
+      - get_aws_secret
+    action:     extract_db_batch
+    config:
+      type:     source
+      host:     <db source name>
+      user:     <username>
+      password: <password>
+      database: <db name>
+      table:    <table name>
+      batch:    1000000
+  - name: test_op
+    after:
+      - extract_db_batch
+    action: test_op
