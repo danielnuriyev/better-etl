@@ -96,7 +96,7 @@ class MySQLSource(Source):
         self.logger.info(f"Cache: {self.cache}")
         return self.cache.get(self._cache_key)
 
-    def next_batch(self):
+    def next_batch(self) -> dict:
 
         self.logger.info(f"Source {time.time()} START")
 
@@ -195,7 +195,7 @@ class MySQLSource(Source):
                     "metadata": {
                         "type": "data",
                         "format": "pandas.dataframe",
-                        "debug": f"{id(self.cache._cache)}",
+                        # "debug": f"{id(self.cache._cache)}",
                         "last_keys": last_keys,
                     }
                 }

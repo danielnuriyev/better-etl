@@ -3,9 +3,12 @@
     "boto3",
     "dagit",
     "dagster",
+    "fsspec",
     "pandas",
     "psutil",
+    "pyarrow",
     "pyyaml",
+    "s3fs",
     "sqlalchemy"
   ],
   "extras_require": {

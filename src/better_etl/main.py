@@ -2,7 +2,9 @@ import inspect
 import json
 import os
 import sys
+import time
 import typing
+import uuid
 import yaml
 
 from boto3 import Session
@@ -10,7 +12,7 @@ from boto3 import Session
 from dagster import asset_sensor, job, op, repository
 from dagster import AssetKey, AssetMaterialization, OpDefinition, OpExecutionContext, Out, Output, RunRequest, SkipReason
 
-from better_etl.caches import Cache
+from better_etl.caches import S3Cache
 from better_etl.sources import MySQLSource
 
 """
@@ -34,6 +36,9 @@ def extract_db_batch(context :OpExecutionContext, secret :dict):
     last_keys = context.solid_config.get("last_keys", None)
     context.log.info(f"last keys: {last_keys}")
 
+    context.log.info(f"bucket: {context.solid_config['cache_bucket']}")
+    context.log.info(f"path: {context.solid_config['cache_path']}")
+
     c = MySQLSource(
         host=context.solid_config["host"],
         user=secret["username"],
@@ -44,6 +49,10 @@ def extract_db_batch(context :OpExecutionContext, secret :dict):
         sleep=0,
         stream=False,  # for a small table that will not overfill the local storage, one can use False
         logger=context.log,
+        cache=S3Cache(
+            bucket=context.solid_config["cache_bucket"],
+            path=context.solid_config["cache_path"]
+        ),
         start_keys=last_keys
     )
     batch = next(c.next_batch())
@@ -62,8 +71,16 @@ def extract_db_batch(context :OpExecutionContext, secret :dict):
 
 
 @op
-def test_op(context: OpExecutionContext, batch) -> None:
-    print(batch)
+def store(context: OpExecutionContext, batch) -> None:
+    bucket = context.solid_config["bucket"]
+    path = context.solid_config["path"]
+    if bucket[-1] == "/": bucket = bucket[:-1]
+    if path[0] == "/": path = path[1:]
+    if path[-1] == "/": path = path[:-1]
+    timestamp = time.strftime("%y%m%d%H%M%S")
+    uid = str(uuid.uuid4())
+    url = f"s3://{bucket}/{path}/{timestamp}-{uid}.parquet"
+    batch["data"].to_parquet(url)
 
 
 def build_job(op_funcs, job_conf):
@@ -139,7 +156,7 @@ def repo():
         if type(m[1]).__name__ == OpDefinition.__name__:
             op_funcs[m[0]] = m[1]
 
-    conf_path = os.path.join(os.getcwd(), "conf", "test.yaml")
+    conf_path = os.path.join(os.getcwd(), "conf", "local.yaml")
     with open(conf_path) as f:
         job_conf = yaml.safe_load(f)
 
@@ -151,10 +168,13 @@ def repo():
 
 def main() -> int:
 
+    # S3Cache(bucket="ss-bi-qa-danieln", path="etl/cache").get("test")
+    # return 0
+
     r = repo()
     j = r[0]
     j.execute_in_process()
-
+    
     return 0 if len(repo()) > 0 else 1
 
 
