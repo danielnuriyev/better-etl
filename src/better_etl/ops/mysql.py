@@ -4,11 +4,15 @@ import typing
 from better_etl.caches import S3Cache
 from better_etl.sources import MySQLSource
 
+from better_etl.ops.op_wrappers import condition
+
 class MySQL:
 
     @classmethod
     @dagster.op
+    @condition
     def get_batch(context: dagster.OpExecutionContext, secret: typing.Dict):
+
         last_keys = context.solid_config.get("last_keys", None)
         context.log.info(f"last keys: {last_keys}")
 

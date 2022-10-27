@@ -89,7 +89,7 @@ def build_sensor(job_conf, dagster_job_conf, job_func):
     return s
 
 
-# @repository
+@repository
 def repo():
 
     conf_path = os.path.join(os.getcwd(), "conf", "local.yaml")
@@ -103,13 +103,11 @@ def repo():
 
 
 def main() -> int:
-
     r = repo()
     j = r[0]
     j.execute_in_process()
     
     return 0 if len(repo()) > 0 else 1
-
 
 if __name__ == '__main__':
 

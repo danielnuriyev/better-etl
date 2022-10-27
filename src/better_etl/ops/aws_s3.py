@@ -3,11 +3,15 @@ import time
 import typing
 import uuid
 
+from better_etl.ops.op_wrappers import condition
+
 class AWSS3:
 
     @classmethod
     @dagster.op
+    @condition
     def store(context: dagster.OpExecutionContext, batch: typing.Dict) -> None:
+
         bucket = context.solid_config["bucket"]
         path = context.solid_config["path"]
         if bucket[-1] == "/": bucket = bucket[:-1]

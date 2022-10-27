@@ -1,22 +1,36 @@
 name: test_job
 ops:
   - name: get_aws_secret
-    action: get_aws_secret
+    package:  better_etl.ops
+    class:    AWSSecretsManager
+    method:   get_secret
     config:
-      secret_name: <name of a secret>
+      secret_name: ...
   - name: extract_db_batch
     after:
       - get_aws_secret
-    action:     extract_db_batch
+    package:  better_etl.ops
+    class:    MySQL
+    method:   get_batch
     config:
       type:     source
-      host:     <db source name>
-      user:     <username>
-      password: <password>
-      database: <db name>
-      table:    <table name>
+      host:     ...
+      user:     ...
+      password: ...
+      database: ...
+      table:    ...
       batch:    1000000
-  - name: test_op
+      cache_bucket: ...
+      cache_path:   etl/cache
+  - name: store
     after:
       - extract_db_batch
-    action: test_op
+    package:  better_etl.ops
+    class:    AWSS3
+    method:   store
+    config:
+      bucket: ...
+      path:   etl/output
+      condition: >
+        batch["data"].size > 0 and
+        batch["data"].size < 10000
