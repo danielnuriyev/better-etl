@@ -1,4 +1,13 @@
 
+class NoneCache:
+
+    def get(self, k):
+        return None
+
+    def put(self, k, v):
+        pass
+
+
 class Cache:
 
     def __init__(self):

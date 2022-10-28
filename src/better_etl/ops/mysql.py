@@ -1,4 +1,5 @@
 import dagster
+import importlib
 import typing
 
 from better_etl.caches import S3Cache
@@ -16,8 +17,19 @@ class MySQL:
         last_keys = context.solid_config.get("last_keys", None)
         context.log.info(f"last keys: {last_keys}")
 
-        context.log.info(f"bucket: {context.solid_config['cache_bucket']}")
-        context.log.info(f"path: {context.solid_config['cache_path']}")
+        cache = None
+        cache_config = context.solid_config.get("cache", None)
+        if cache_config is not None:
+
+            cache_class = cache_config.get("class", None)
+            i = cache_class.rindex('.')
+            module_name = cache_class[0 : i]
+            class_name = cache_class[i+1:]
+            module = importlib.import_module(module_name)
+            class_ = getattr(module, class_name)
+
+            cache_config.pop("class")
+            cache = class_(**cache_config)
 
         c = MySQLSource(
             host=context.solid_config["host"],
@@ -29,10 +41,7 @@ class MySQL:
             sleep=0,
             stream=False,  # for a small table that will not overfill the local storage, one can use False
             logger=context.log,
-            cache=S3Cache(
-                bucket=context.solid_config["cache_bucket"],
-                path=context.solid_config["cache_path"]
-            ),
+            cache=cache,
             start_keys=last_keys
         )
         batch = next(c.next_batch())

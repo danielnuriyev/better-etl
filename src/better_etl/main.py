@@ -15,8 +15,11 @@ def build_job(job_conf):
     ops_dict = {}
     job_conf = {"ops": {}}
     for op_conf in ops_list:
-        if "config" in op_conf:
-            job_conf["ops"][op_conf["name"]] = {"config": op_conf["config"]}
+        if "config" not in op_conf:
+            op_conf["config"] = {}
+
+        op_conf["config"]["job_name"] = job_name
+        job_conf["ops"][op_conf["name"]] = {"config": op_conf["config"]}
         ops_dict[op_conf["name"]] = op_conf
 
     op_packages = {}

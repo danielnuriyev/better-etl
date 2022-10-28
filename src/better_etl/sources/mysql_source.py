@@ -6,7 +6,7 @@ import time
 import mysql.connector
 import pandas as pd
 
-from better_etl.caches import Cache
+from better_etl.caches import NoneCache, Cache
 from better_etl.sources.source import Source
 
 _logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ class MySQLSource(Source):
                  stream=False,
                  schema=None,
                  logger=_logger,
-                 cache=Cache(),
+                 cache=None,
                  **kwargs):
 
         """
@@ -51,12 +51,12 @@ class MySQLSource(Source):
         self.max_sleep = max_sleep
         self.stream = stream
         self.schema = schema
-        self.cache = cache
+        self.cache = NoneCache() if cache is None else cache
         self._con = None
         self._cache_key = f"{self.host}:{self.port}/{self.database}/{self.table}"
 
-        if self.start_keys is not None:
-            self.cache.put(self._cache_key, self.start_keys)
+        # if cache is not None and self.start_keys is not None:
+        #    self.cache.put(self._cache_key, self.start_keys)
 
 
     def _connect(self):
@@ -93,7 +93,6 @@ class MySQLSource(Source):
         return self.unique_keys
 
     def get_last_keys(self):
-        self.logger.info(f"Cache: {self.cache}")
         return self.cache.get(self._cache_key)
 
     def next_batch(self) -> dict:

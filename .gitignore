@@ -7,3 +7,4 @@
 __pycache__
 src/datadagster.egg-info
 local.yaml
+tmp.yaml
