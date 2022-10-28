@@ -1,6 +1,8 @@
+import datetime
 import importlib
 import os
 import sys
+import time
 import yaml
 
 from dagster import asset_sensor, job, repository
@@ -92,12 +94,37 @@ def build_sensor(job_conf, dagster_job_conf, job_func):
     return s
 
 
+def parse_yaml(content):
+    start = 0
+    start = content.find('{', start)
+    end = content.find('}', start + 1)
+    sub = content[start + 1 : end]
+    if sub.startswith("timestamp"):
+        if sub.find(':') > 8:
+            format = sub[sub.find(':')+1:]
+            # timestamp:%Y%m%d%H%M%S
+            sub = datetime.datetime.now().strftime(format)
+        else:
+            sub = int(time.time())
+    else:
+        package_name = sub[:sub.rindex('.')]
+
+        _locals = locals()
+        exec(f"import {package_name}; sub={sub}", globals(), _locals)
+
+    content = content[0:start] + str(_locals["sub"]) + content[end+1:]
+
+    return content
+
+
 @repository
 def repo():
 
     conf_path = os.path.join(os.getcwd(), "conf", "local.yaml")
     with open(conf_path) as f:
-        job_conf = yaml.safe_load(f)
+        content = f.read()
+        content = parse_yaml(content)
+        job_conf = yaml.safe_load(content)
 
     dagster_job_conf, j = build_job(job_conf)
     s = build_sensor(job_conf, dagster_job_conf, j)
@@ -111,6 +138,7 @@ def main() -> int:
     j.execute_in_process()
     
     return 0 if len(repo()) > 0 else 1
+
 
 if __name__ == '__main__':
 
