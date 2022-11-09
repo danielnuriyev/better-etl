@@ -7,7 +7,15 @@ from better_etl.ops.op_wrappers import condition
 
 class AWSSecretsManager:
 
-    @classmethod
+    def get_op_metadata(self):
+        return {
+            "get_secret": {
+                "return": {
+                    "dynamic": False
+                }
+            }
+        }
+
     @dagster.op
     @condition
     def get_secret(context: dagster.OpExecutionContext) -> typing.Dict:

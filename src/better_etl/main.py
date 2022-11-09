@@ -1,5 +1,6 @@
 import datetime
 import importlib
+import inspect
 import os
 import sys
 import time
@@ -26,6 +27,7 @@ def build_job(job_conf):
 
     op_packages = {}
     op_classes = {}
+    op_metas = {}
 
     def dive(op_names, op_returns, depth):
         for op_name in op_names:
@@ -45,6 +47,12 @@ def build_job(job_conf):
                 class_inst = op_classes[full_class_name]
 
             method_name = op_conf["method"]
+            if method_name not in op_metas:
+                if hasattr(class_inst, "get_op_metadata"):
+                    op_meta = class_inst.get_op_metadata()[method_name]
+                else:
+                    op_meta = {"return":{"dynamic":False}}
+                op_metas[op_name] = op_meta
 
             if "after" not in op_conf:
                 if op_name not in op_returns:
@@ -55,12 +63,19 @@ def build_job(job_conf):
                 after_list = op_conf["after"]
                 dive(after_list, op_returns, depth + 1)
                 if op_name not in op_returns:
+                    cur_op = getattr(class_inst, method_name).alias(op_name)
+
                     cur_returns = []
                     for prev_name in after_list:
                         prev_return = op_returns[prev_name]
-                        cur_returns.append(prev_return)
-                    cur_op = getattr(class_inst, method_name).alias(op_name)
-                    op_returns[op_name] = cur_op(*cur_returns)
+                        print(op_metas[prev_name])
+                        if op_metas[prev_name]["return"]["dynamic"]:
+                            op_returns[op_name] = prev_return.map(cur_op).collect()
+                            break
+                        else:
+                            cur_returns.append(prev_return)
+                    if op_name not in op_returns:
+                        op_returns[op_name] = cur_op(*cur_returns)
 
     @job(config=job_conf, name=job_name)
     def j():

@@ -1,17 +1,18 @@
 name: test_job
+mode: reload
 ops:
-  - name: get_aws_secret
+  - name: get_secret
     package:  better_etl.ops
     class:    AWSSecretsManager
     method:   get_secret
     config:
       secret_name: ...
-  - name: extract_db_batch
+  - name: get_batches
     after:
-      - get_aws_secret
+      - get_secret
     package:  better_etl.ops
     class:    MySQL
-    method:   get_batch
+    method:   get_batches
     config:
       type:     source
       host:     ...
@@ -26,13 +27,13 @@ ops:
         path:   dagster/jobs/test_job/ops/mysql/get_batch/cache
   - name: store
     after:
-      - extract_db_batch
+      - get_batches
     package:  better_etl.ops
     class:    AWSS3
     method:   store
     config:
       bucket: ...
-      path:   tables/...
+      path:   tables/test_table/{time.time()}
       condition: >
         batch["data"].size > 0 and
-        batch["data"].size < 10000
+        batch["data"].size < 2000000

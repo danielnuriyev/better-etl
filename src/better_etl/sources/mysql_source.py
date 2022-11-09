@@ -229,4 +229,6 @@ class MySQLSource(Source):
             # if self.stream:
                 # next = False
 
+        cur.close()
+
         self.logger.info("Finished")

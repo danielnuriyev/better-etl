@@ -7,10 +7,18 @@ from better_etl.ops.op_wrappers import condition
 
 class AWSS3:
 
-    @classmethod
+    def get_op_metadata(self):
+        return {
+            "store": {
+                "return": {
+                    "dynamic": False
+                }
+            }
+        }
+
     @dagster.op
     @condition
-    def store(context: dagster.OpExecutionContext, batch: typing.Dict) -> None:
+    def store(context: dagster.OpExecutionContext, batch: typing.Dict):
 
         bucket = context.solid_config["bucket"]
         path = context.solid_config["path"]
