@@ -31,6 +31,7 @@ def build_job(job_conf):
 
     def dive(op_names, op_returns, depth):
         for op_name in op_names:
+            print(op_name)
             op_conf = ops_dict[op_name]
             package_name = op_conf["package"]
             if package_name not in op_packages:
@@ -68,7 +69,6 @@ def build_job(job_conf):
                     cur_returns = []
                     for prev_name in after_list:
                         prev_return = op_returns[prev_name]
-                        print(op_metas[prev_name])
                         if op_metas[prev_name]["return"]["dynamic"]:
                             op_returns[op_name] = prev_return.map(cur_op).collect()
                             break
@@ -142,9 +142,9 @@ def repo():
         job_conf = yaml.safe_load(content)
 
     dagster_job_conf, j = build_job(job_conf)
-    s = build_sensor(job_conf, dagster_job_conf, j)
+    # s = build_sensor(job_conf, dagster_job_conf, j)
 
-    return [j, s]
+    return [j]
 
 
 def main() -> int:
