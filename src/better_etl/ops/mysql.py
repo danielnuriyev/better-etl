@@ -42,6 +42,13 @@ class MySQL:
             logger=context.log,
             cache=cache
         )
+
+        max_matches = context.solid_config.get("batches", None)
+        batch_count = 0
+
         for batch in c.next_batch():
             key = "-".join(str(v) for v in batch["metadata"]["last_keys"].values())
             yield dagster.DynamicOutput(batch, mapping_key=key)
+            batch_count += 1
+            if max_matches and batch_count >= max_matches:
+                break

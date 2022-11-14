@@ -1,5 +1,5 @@
-name: test_job
-mode: reload
+name: sample_appended_job
+schedule: 0-59 * * * *
 ops:
   - name: get_secret
     package:  better_etl.ops
@@ -21,10 +21,11 @@ ops:
       database: ...
       table:    ...
       batch:    1000000
+      batches:  1
       cache:
         class:  better_etl.caches.S3Cache
         bucket: ...
-        path:   dagster/jobs/test_job/ops/mysql/get_batch/cache
+        path:   dagster/jobs/sample_appended_job/ops/mysql/get_batch/cache
   - name: store
     after:
       - get_batches
@@ -33,7 +34,8 @@ ops:
     method:   store
     config:
       bucket: ...
-      path:   tables/test_table/{time.time()}
+      path:   tables/sample_appended_job/{time.time()}
+      # this is an example of a condition
       condition: >
         batch["data"].size > 0 and
-        batch["data"].size < 2000000
+        batch["data"].size < 1000001

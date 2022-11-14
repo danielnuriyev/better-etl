@@ -6,7 +6,7 @@ import sys
 import time
 import yaml
 
-from dagster import asset_sensor, job, repository
+from dagster import asset_sensor, job, repository, schedule
 from dagster import AssetKey, RunRequest
 
 
@@ -109,6 +109,20 @@ def build_sensor(job_conf, dagster_job_conf, job_func):
     return s
 
 
+def build_schedule(job_conf, dagster_job_conf, job_func):
+
+    schedule_ = str(job_conf["schedule"])
+
+    @schedule(job=job_func, cron_schedule=schedule_)
+    def s(context):
+        return RunRequest(
+            run_key=None,
+            run_config=dagster_job_conf,
+        )
+
+    return s
+
+
 def parse_yaml(content):
     start = 0
     start = content.find('{', start)
@@ -143,8 +157,9 @@ def repo():
 
     dagster_job_conf, j = build_job(job_conf)
     # s = build_sensor(job_conf, dagster_job_conf, j)
+    s = build_schedule(job_conf, dagster_job_conf, j)
 
-    return [j]
+    return [j, s]
 
 
 def main() -> int:

@@ -1,0 +1,36 @@
+name: sample_appended_job
+schedule: 0 0 * * *
+ops:
+  - name: get_secret
+    package:  better_etl.ops
+    class:    AWSSecretsManager
+    method:   get_secret
+    config:
+      secret_name: ...
+  - name: get_batches
+    after:
+      - get_secret
+    package:  better_etl.ops
+    class:    MySQL
+    method:   get_batches
+    config:
+      type:     source
+      host:     ...
+      user:     ...
+      password: ...
+      database: ...
+      table:    ...
+      batch:    1000000
+  - name: store
+    after:
+      - get_batches
+    package:  better_etl.ops
+    class:    AWSS3
+    method:   store
+    config:
+      bucket: ...
+      path:   tables/sample_reloaded_job/{time.time()}
+      # this is an example of a condition
+      condition: >
+        batch["data"].size > 0 and
+        batch["data"].size < 1000001
