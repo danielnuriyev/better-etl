@@ -7,6 +7,7 @@ from better_etl.caches import Cache
 from better_etl.sources import MySQLSource
 
 from better_etl.ops.op_wrappers import condition
+from better_etl.utils.reflect import create_instance
 
 class MySQL:
 
@@ -26,12 +27,7 @@ class MySQL:
         cache = context.solid_config.get("cache", None)
         if cache:
             full_name = cache.pop("class")
-            i = full_name.rindex(".")
-            module_name = full_name[:i]
-            class_name = full_name[i+1:]
-            module = importlib.import_module(module_name)
-            class_ = getattr(module, class_name)
-            cache = class_(**cache)
+            cache = create_instance(full_name, cache)
         else:
             cache = Cache()
 
