@@ -20,16 +20,9 @@ class MySQL:
             }
         }
 
-    @dagster.op(out=dagster.DynamicOut())
+    @dagster.op(out=dagster.DynamicOut(), required_resource_keys={"cache"})
     @condition
     def get_batches(context: dagster.OpExecutionContext, secret: typing.Dict):
-
-        cache = context.solid_config.get("cache", None)
-        if cache:
-            full_name = cache.pop("class")
-            cache = create_instance(full_name, cache)
-        else:
-            cache = Cache()
 
         c = MySQLSource(
             host=context.solid_config["host"],
@@ -40,7 +33,7 @@ class MySQL:
             limit=context.solid_config["batch"],
             stream=False,  # for a small table that will not overfill the local storage, one can use False
             logger=context.log,
-            cache=cache
+            cache=context.resources.cache
         )
 
         max_matches = context.solid_config.get("batches", None)

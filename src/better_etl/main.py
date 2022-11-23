@@ -6,17 +6,27 @@ import sys
 import time
 import yaml
 
-from dagster import asset_sensor, job, repository, schedule
+from dagster import asset_sensor, job, repository, schedule, build_resources, build_init_resource_context
 from dagster import AssetKey, RunRequest
+
+from better_etl.resources.cache import cache
 
 
 def build_job(job_conf):
 
     job_name = job_conf["name"]
+    cache_conf = job_conf.get("cache", None)
 
     ops_list = job_conf["ops"]
     ops_dict = {}
     job_conf = {"ops": {}}
+    if cache_conf:
+        job_conf["resources"] = {
+            "cache": {
+                "config" : cache_conf
+            }
+        }
+
     for op_conf in ops_list:
         if "config" not in op_conf:
             op_conf["config"] = {}
@@ -77,7 +87,13 @@ def build_job(job_conf):
                     if op_name not in op_returns:
                         op_returns[op_name] = cur_op(*cur_returns)
 
-    @job(config=job_conf, name=job_name)
+    @job(
+        config=job_conf,
+        name=job_name,
+        resource_defs={
+            "cache": cache
+        }
+    )
     def j():
         op_returns = {}
         dive(ops_dict.keys(), op_returns, 0)
