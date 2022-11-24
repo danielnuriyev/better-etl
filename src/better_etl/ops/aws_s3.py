@@ -29,3 +29,8 @@ class AWSS3:
         uid = str(uuid.uuid4())
         url = f"s3://{bucket}/{path}/{timestamp}-{uid}.parquet"
         batch["data"].to_parquet(url)
+
+        context.log.info(batch["data"])
+        context.log.info(batch["metadata"])
+
+        return batch["metadata"]

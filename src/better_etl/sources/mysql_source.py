@@ -100,13 +100,12 @@ class MySQLSource(Source):
 
         next = True
         retry = 0
+
+        previous_keys = self.get_last_keys()
+        self.logger.info(f"previous_keys: {previous_keys}")
+
         while next:
-
             if keys:
-
-                previous_keys = self.get_last_keys()
-                self.logger.info(f"previous_keys: {previous_keys}")
-
                 if previous_keys:
                     where = "WHERE"
                     for i in range(len(keys)):
@@ -152,8 +151,6 @@ class MySQLSource(Source):
                 else:
                     df = pd.DataFrame(rows)
 
-                #
-
                 if keys:
                     last_row = rows[-1]
 
@@ -161,7 +158,7 @@ class MySQLSource(Source):
                     for key in keys:
                         last_keys[key] = last_row[key]
 
-                    previous_keys = self.get_last_keys()
+                    # previous_keys = self.get_last_keys()
                     tmp = 0
                     if previous_keys:
                         tmp = 1
@@ -173,34 +170,33 @@ class MySQLSource(Source):
                                 break
                         if found:
                             self.logger.info(f"put last keys: {last_keys}")
-                            self.cache.put(self._cache_key, last_keys)
+                            # self.cache.put(self._cache_key, last_keys)
+                            previous_keys = last_keys
                         else:
                             self.logger.warn("Exiting: unique keys in this batch are not greater than in the previous batch")
                             next = False
                     else:
                         tmp = 2
                         self.logger.info(f"put last keys: {last_keys}")
-                        self.cache.put(self._cache_key, last_keys)
+                        # self.cache.put(self._cache_key, last_keys)
+                        previous_keys = last_keys
 
-                #
+                pid = os.getpid()
+                process = psutil.Process(pid)
+                memory = process.memory_info().rss
+                self.logger.info(f'Memory: {"{:,}".format(memory)}')
 
                 yield {
                     "data": df,
                     "metadata": {
                         "type": "data",
                         "format": "pandas.dataframe",
-                        # "debug": f"{id(self.cache._cache)}",
                         "last_keys": last_keys,
                     }
                 }
 
             else:
                 next = False
-
-            pid = os.getpid()
-            process = psutil.Process(pid)
-            memory = process.memory_info().rss
-            self.logger.info(f'Memory: {"{:,}".format(memory)}')
 
         cur.close()
 
