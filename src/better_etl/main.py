@@ -127,16 +127,24 @@ def build_sensor(job_conf, dagster_job_conf, job_func):
 
 def build_schedule(job_conf, dagster_job_conf, job_func):
 
-    schedule_ = str(job_conf["schedule"])
+    schedule_conf = job_conf.get("schedule", None)
 
-    @schedule(job=job_func, cron_schedule=schedule_)
-    def s(context):
-        return RunRequest(
-            run_key=None,
-            run_config=dagster_job_conf,
-        )
+    if schedule_conf:
 
-    return s
+        schedule_ = str(job_conf["schedule"])
+
+        @schedule(job=job_func, cron_schedule=schedule_)
+        def s(context):
+            return RunRequest(
+                run_key=None,
+                run_config=dagster_job_conf,
+            )
+
+        return s
+
+    else:
+
+        return None
 
 
 def parse_yaml(content):
@@ -172,10 +180,14 @@ def repo():
         job_conf = yaml.safe_load(content)
 
     dagster_job_conf, j = build_job(job_conf)
-    # s = build_sensor(job_conf, dagster_job_conf, j)
-    s = build_schedule(job_conf, dagster_job_conf, j)
 
-    return [j, s]
+    r = [j]
+
+    s = build_schedule(job_conf, dagster_job_conf, j)
+    if s:
+        r.append(s)
+
+    return r
 
 
 def main() -> int:

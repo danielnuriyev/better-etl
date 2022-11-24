@@ -24,7 +24,6 @@ class MySQLSource(Source):
                  limit=1000000,
                  sleep=0,
                  max_sleep = 15 * 60,
-                 stream=False,
                  schema=None,
                  logger=_logger,
                  cache=None,
@@ -49,14 +48,10 @@ class MySQLSource(Source):
         self.limit = limit
         self.sleep = sleep
         self.max_sleep = max_sleep
-        self.stream = stream
         self.schema = schema
         self.cache = NoneCache() if cache is None else cache
         self._con = None
         self._cache_key = f"{self.host}:{self.port}/{self.database}/{self.table}"
-
-        # if cache is not None and self.start_keys is not None:
-        #    self.cache.put(self._cache_key, self.start_keys)
 
 
     def _connect(self):
@@ -206,28 +201,6 @@ class MySQLSource(Source):
             process = psutil.Process(pid)
             memory = process.memory_info().rss
             self.logger.info(f'Memory: {"{:,}".format(memory)}')
-
-            if not self.stream and next and self.sleep:
-                time.sleep(self.sleep)
-            """
-            elif self.stream:
-                if next:
-                    retry = 0
-                    if self.sleep:
-                        time.sleep(self.sleep)
-                else:
-                    sleep = self.sleep + retry ^ 2
-                    if sleep > self.max_sleep:
-                        sleep = self.max_sleep
-                    else:
-                        retry += 1
-                    if sleep:
-                        self.logger.info(f"Sleeping for {sleep} seconds")
-                        time.sleep(sleep)
-                """
-
-            # if self.stream:
-                # next = False
 
         cur.close()
 
