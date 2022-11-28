@@ -16,7 +16,7 @@ class AWSS3:
             }
         }
 
-    @dagster.op
+    @dagster.op(required_resource_keys={"cache"})
     @condition
     def store(context: dagster.OpExecutionContext, batch: typing.Dict):
 
@@ -30,7 +30,6 @@ class AWSS3:
         url = f"s3://{bucket}/{path}/{timestamp}-{uid}.parquet"
         batch["data"].to_parquet(url)
 
-        context.log.info(batch["data"])
-        context.log.info(batch["metadata"])
+        batch.pop("data")
 
-        return batch["metadata"]
+        return batch

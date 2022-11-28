@@ -192,6 +192,7 @@ class MySQLSource(Source):
                         "type": "data",
                         "format": "pandas.dataframe",
                         "last_keys": last_keys,
+                        "cache_key": self._cache_key
                     }
                 }
 
