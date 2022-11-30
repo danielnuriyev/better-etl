@@ -44,7 +44,7 @@ class AWSAthena:
                 raise f"Exceeded {max_sleep} seconds to execute {query}"
 
     # @classmethod
-    @dagster.op
+    @dagster.op(retry_policy=dagster.RetryPolicy(max_retries=2, delay=1, backoff=dagster.Backoff(dagster.Backoff.EXPONENTIAL)))
     @condition
     def drop_table(context: dagster.OpExecutionContext, args):
 

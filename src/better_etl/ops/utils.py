@@ -2,7 +2,7 @@ import dagster
 
 class Utils:
 
-    @dagster.op
+    @dagster.op(retry_policy=dagster.RetryPolicy(max_retries=2, delay=1, backoff=dagster.Backoff(dagster.Backoff.EXPONENTIAL)))
     def find_last_keys(context: dagster.OpExecutionContext, collection):
 
         context.log.info(type(collection))

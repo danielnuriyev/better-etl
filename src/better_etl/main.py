@@ -11,7 +11,6 @@ from dagster import AssetKey, RunRequest
 
 from better_etl.resources.cache import cache
 
-
 def build_job(job_conf):
 
     job_name = job_conf["name"]

@@ -7,7 +7,6 @@ from better_etl.caches import Cache
 from better_etl.sources import MySQLSource
 
 from better_etl.ops.op_wrappers import condition
-from better_etl.utils.reflect import create_instance
 
 class MySQL:
 
@@ -20,7 +19,11 @@ class MySQL:
             }
         }
 
-    @dagster.op(out=dagster.DynamicOut(), required_resource_keys={"cache"})
+    @dagster.op(
+        out=dagster.DynamicOut(),
+        required_resource_keys={"cache"},
+        retry_policy=dagster.RetryPolicy(max_retries=2, delay=1, backoff=dagster.Backoff(dagster.Backoff.EXPONENTIAL))
+    )
     @condition
     def get_batches(context: dagster.OpExecutionContext, secret: typing.Dict):
 

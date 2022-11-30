@@ -16,7 +16,7 @@ class AWSSecretsManager:
             }
         }
 
-    @dagster.op
+    @dagster.op(retry_policy=dagster.RetryPolicy(max_retries=2, delay=1, backoff=dagster.Backoff(dagster.Backoff.EXPONENTIAL)))
     @condition
     def get_secret(context: dagster.OpExecutionContext) -> typing.Dict:
 
