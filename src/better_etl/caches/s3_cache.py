@@ -2,6 +2,8 @@ import boto3
 import botocore
 import json
 
+from better_etl.utils.decorators import retry
+
 class S3Cache:
 
     def __init__(self, bucket, path):
@@ -14,6 +16,7 @@ class S3Cache:
         if path[-1] == "/": path = path[:-1]
         self.path = path
 
+    @retry
     def get(self, k):
         full_path = f"{self.path}/{k}"
         object = self.s3.Object(self.bucket, full_path)
@@ -26,6 +29,7 @@ class S3Cache:
             else:
                 raise e
 
+    @retry
     def put(self, k, v):
         full_path = f"{self.path}/{k}"
         object = self.s3.Object(self.bucket, full_path)

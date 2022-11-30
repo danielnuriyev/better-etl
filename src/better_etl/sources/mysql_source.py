@@ -8,6 +8,7 @@ import pandas as pd
 
 from better_etl.caches import NoneCache, Cache
 from better_etl.sources.source import Source
+from better_etl.utils.decorators import retry
 
 _logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ class MySQLSource(Source):
         self._con = None
         self._cache_key = f"{self.host}:{self.port}/{self.database}/{self.table}"
 
-
+    @retry
     def _connect(self):
         if not self._con:
             self._con = mysql.connector.connect(host=self.host, port=self.port, user=self.user,
@@ -61,11 +62,13 @@ class MySQLSource(Source):
                                                database=self.database)
         return self._con
 
+    @retry
     def close(self):
         self.logger.info(f"Source {time.time()} CLOSING")
         if self._con:
             self._con.close()
 
+    @retry
     def get_columns(self):
         try:
             cur = self._connect().cursor(dictionary=True)
@@ -90,6 +93,7 @@ class MySQLSource(Source):
     def get_last_keys(self):
         return self.cache.get(self._cache_key)
 
+    @retry
     def next_batch(self) -> dict:
 
         self.logger.info(f"Source {time.time()} START")
