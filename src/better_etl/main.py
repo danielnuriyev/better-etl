@@ -15,6 +15,10 @@ def build_job(job_conf):
 
     job_name = job_conf["name"]
     cache_conf = job_conf.get("cache", None)
+    job_retry = job_conf.pop("retry", {})
+    job_retry_max = job_retry.get("max", 0)
+    job_retry_delay = job_retry.get("delay", 0)
+    job_retry_backoff = job_retry.get("backoff", linear)
 
     ops_list = job_conf["ops"]
     ops_dict = {}
@@ -94,7 +98,15 @@ def build_job(job_conf):
         name=job_name,
         resource_defs={
             "cache": cache
-        }
+        },
+        op_retry_policy=dagster.RetryPolicy(
+            max_retries=job_retry_max,
+            delay=job_retry_delay,
+            backoff=dagster.Backoff(
+                dagster.Backoff.EXPONENTIAL
+                if job_retry_backoff == "exponential"
+                else dagster.Backoff.LINEAR)
+        )
     )
     def j():
         op_returns = {}
