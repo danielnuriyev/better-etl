@@ -6,8 +6,8 @@ import sys
 import time
 import yaml
 
-from dagster import asset_sensor, job, repository, schedule, build_resources, build_init_resource_context
-from dagster import AssetKey, RunRequest
+from dagster import asset_sensor, job, repository, schedule, sensor, build_resources, build_init_resource_context
+from dagster import AssetKey, Backoff, RetryPolicy, RunRequest
 
 from better_etl.resources.cache import cache
 
@@ -18,7 +18,8 @@ def build_job(job_conf):
     job_retry = job_conf.pop("retry", {})
     job_retry_max = job_retry.get("max", 0)
     job_retry_delay = job_retry.get("delay", 0)
-    job_retry_backoff = job_retry.get("backoff", linear)
+    job_retry_backoff = job_retry.get("backoff", "linear")
+    job_retry_lookback = job_retry.get("lookback_minutes", 0)
 
     ops_list = job_conf["ops"]
     ops_dict = {}
@@ -99,20 +100,20 @@ def build_job(job_conf):
         resource_defs={
             "cache": cache
         },
-        op_retry_policy=dagster.RetryPolicy(
+        op_retry_policy=RetryPolicy(
             max_retries=job_retry_max,
             delay=job_retry_delay,
-            backoff=dagster.Backoff(
-                dagster.Backoff.EXPONENTIAL
+            backoff=Backoff(
+                Backoff.EXPONENTIAL
                 if job_retry_backoff == "exponential"
-                else dagster.Backoff.LINEAR)
+                else Backoff.LINEAR)
         )
     )
     def j():
         op_returns = {}
         dive(ops_dict.keys(), op_returns, 0)
 
-    return job_conf, j
+    return job_conf, j, build_job_failure_sensor(j, job_retry_lookback, job_retry_max)
 
 
 def build_sensor(job_conf, dagster_job_conf, job_func):
@@ -158,6 +159,51 @@ def build_schedule(job_conf, dagster_job_conf, job_func):
         return None
 
 
+def build_job_failure_sensor(job, lookback_minutes, max_retries):
+
+    @sensor(
+        description="Handle job failure",
+        jobs=[job],
+    )
+    def s(context):
+
+        events = context.instance.get_event_records(
+            EventRecordsFilter(
+                event_type=DagsterEventType.RUN_FAILURE,
+                after_timestamp=(datetime.now() - timedelta(minutes=lookback_minutes)).timestamp()
+            ),
+            ascending=False,
+            limit=max_retries,
+        )
+        processed = []
+        for event in events:
+            job_name = event.event_log_entry.job_name
+            if job_name != job:
+                continue
+
+            run = context.instance.get_run_by_id(event.event_log_entry.run_id)
+            if run.run_id in processed:
+                continue
+
+            attempt = int(run.tags.get("retry_attempt", 0))
+
+            if attempt < max_retries:
+
+                tags = run.tags
+                tags["retry_attempt"] = str(attempts + 1)
+
+                yield RunRequest(
+                    run_key=run_info.run_id,
+                    job_name=job_name,
+                    run_config=run.run_config,
+                    tags=tags,
+                )
+
+            processed.append(run.run_id)
+
+    return s
+
+
 def parse_yaml(content):
     start = 0
     start = content.find('{', start)
@@ -190,9 +236,9 @@ def repo():
         content = parse_yaml(content)
         job_conf = yaml.safe_load(content)
 
-    dagster_job_conf, j = build_job(job_conf)
+    dagster_job_conf, j, failure_sensor = build_job(job_conf)
 
-    r = [j]
+    r = [j, failure_sensor]
 
     s = build_schedule(job_conf, dagster_job_conf, j)
     if s:
