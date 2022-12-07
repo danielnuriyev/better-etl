@@ -20,6 +20,7 @@ def build_job(job_conf):
     job_retry_delay = job_retry.get("delay", 0)
     job_retry_backoff = job_retry.get("backoff", "linear")
     job_retry_lookback = job_retry.get("lookback_minutes", 0)
+    job_retry_notifier_conf = job_retry.get("notifier", None)
 
     ops_list = job_conf["ops"]
     ops_dict = {}
@@ -113,7 +114,9 @@ def build_job(job_conf):
         op_returns = {}
         dive(ops_dict.keys(), op_returns, 0)
 
-    return job_conf, j, build_job_failure_sensor(j, job_retry_lookback, job_retry_max)
+    failure_sensor = build_job_failure_sensor(j, job_retry_lookback, job_retry_max, job_retry_notifier_conf)
+
+    return job_conf, j, failure_sensor
 
 
 def build_sensor(job_conf, dagster_job_conf, job_func):
@@ -159,7 +162,7 @@ def build_schedule(job_conf, dagster_job_conf, job_func):
         return None
 
 
-def build_job_failure_sensor(job, lookback_minutes, max_retries):
+def build_job_failure_sensor(job, lookback_minutes, max_retries, notifier_conf):
 
     @sensor(
         description="Handle job failure",
@@ -198,6 +201,18 @@ def build_job_failure_sensor(job, lookback_minutes, max_retries):
                     run_config=run.run_config,
                     tags=tags,
                 )
+
+            elif notifier_conf is not None:
+
+                package_name = notifier_conf["package"]
+                class_name = notifier_conf["class"]
+
+                package_obj = importlib.import_module(package_name)
+                class_obj = getattr(package_obj, class_name)
+
+                init = notifier_conf.get("config", {})
+
+                class_obj(**init).notify(f"Failed to run job {job_name} after {max_retries} retries")
 
             processed.append(run.run_id)
 

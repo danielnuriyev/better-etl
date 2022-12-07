@@ -1,5 +1,15 @@
-name: sample_appended_job
+name: test_job
 schedule: 0 0 * * *
+retries:
+  max: 2
+  delay: 1
+  backoff: exponential
+  lookback_minutes: 5
+  notifier:
+    package:  better_etl.notifiers.notifier
+    class:    Notifier
+    config:
+      test: test
 ops:
   - name: get_secret
     package:  better_etl.ops
@@ -14,14 +24,12 @@ ops:
     class:    MySQL
     method:   get_batches
     config:
-      type:     source
       host:     ...
-      user:     ...
-      password: ...
       database: ...
       table:    ...
-      batch:    1000000
-  - name: store
+      batch:    1000
+      batches:  10
+  - name: store_batches
     after:
       - get_batches
     package:  better_etl.ops
@@ -29,8 +37,7 @@ ops:
     method:   store
     config:
       bucket: ...
-      path:   tables/sample_reloaded_job/{time.time()}
-      # this is an example of a condition
+      path:   tables/.../{time.time()}
       condition: >
         batch["data"].size > 0 and
-        batch["data"].size < 1000001
+        batch["data"].size < 100000
