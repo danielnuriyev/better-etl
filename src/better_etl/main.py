@@ -2,9 +2,12 @@ import datetime
 import importlib
 import inspect
 import os
+import re
 import sys
 import time
 import yaml
+
+from string import Template
 
 from dagster import asset_sensor, job, repository, schedule, sensor, build_resources, build_init_resource_context
 from dagster import AssetKey, Backoff, DagsterEventType, EventRecordsFilter, RetryPolicy, RunRequest
@@ -234,29 +237,20 @@ def build_job_failure_sensor(job, lookback_minutes, max_retries, notifier_conf):
 
 
 def parse_yaml(content):
-    start = 0
-    start = content.find('{', start)
-    end = content.find('}', start + 1)
-    sub = content[start + 1 : end]
-    if sub.startswith("timestamp"):
-        if sub.find(':') > 8:
-            format = sub[sub.find(':')+1:]
-            # timestamp:%Y%m%d%H%M%S
-            sub = datetime.datetime.now().strftime(format)
-        else:
-            sub = int(time.time())
-    else:
-        package_name = sub[:sub.rindex('.')]
+    pattern = re.compile("\{(.+)\}", re.DOTALL)
+    match = pattern.match(content)
+    sub = match.group(0).strip()
+    mapping = eval(sub)
+    content = content[match.end():]
+    template = Template(content)
+    content = template.substitute(**mapping)
 
-        _locals = locals()
-        exec(f"import {package_name}; sub={sub}", globals(), _locals)
-
-    content = content[0:start] + str(_locals["sub"]) + content[end+1:]
+    print(content)
 
     return content
 
 
-@repository
+# @repository
 def repo():
 
     conf_path = os.path.join(os.getcwd(), "conf", "local.yaml")
@@ -278,10 +272,10 @@ def repo():
 
 def main() -> int:
     r = repo()
-    j = r[0]
-    j.execute_in_process()
+    # j = r[0]
+    # j.execute_in_process()
     
-    return 0 if len(repo()) > 0 else 1
+    # return 0 if len(repo()) > 0 else 1
 
 
 if __name__ == '__main__':

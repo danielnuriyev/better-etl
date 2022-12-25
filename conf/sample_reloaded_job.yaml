@@ -1,3 +1,6 @@
+{
+  "t": time.time()
+}
 name: test_job
 schedule: 0 0 * * *
 retries:
@@ -37,7 +40,7 @@ ops:
     method:   store
     config:
       bucket: ...
-      path:   tables/.../{time.time()}
+      path:   tables/.../$t
       condition: >
         batch["data"].size > 0 and
         batch["data"].size < 100000
