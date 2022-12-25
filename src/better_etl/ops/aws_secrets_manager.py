@@ -20,6 +20,8 @@ class AWSSecretsManager:
     @condition
     def get_secret(context: dagster.OpExecutionContext) -> typing.Dict:
 
+        raise 'TEST'
+
         context.log.info("get_aws_secret")
         secret_name = context.solid_config["secret_name"]
         session = boto3.Session()

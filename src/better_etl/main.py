@@ -7,7 +7,7 @@ import time
 import yaml
 
 from dagster import asset_sensor, job, repository, schedule, sensor, build_resources, build_init_resource_context
-from dagster import AssetKey, Backoff, RetryPolicy, RunRequest
+from dagster import AssetKey, Backoff, DagsterEventType, EventRecordsFilter, RetryPolicy, RunRequest
 
 from better_etl.resources.cache import cache
 
@@ -15,7 +15,7 @@ def build_job(job_conf):
 
     job_name = job_conf["name"]
     cache_conf = job_conf.get("cache", None)
-    job_retry = job_conf.pop("retry", {})
+    job_retry = job_conf.get("retry", {})
     job_retry_max = job_retry.get("max", 0)
     job_retry_delay = job_retry.get("delay", 0)
     job_retry_backoff = job_retry.get("backoff", "linear")
@@ -168,35 +168,49 @@ def build_job_failure_sensor(job, lookback_minutes, max_retries, notifier_conf):
         description="Handle job failure",
         jobs=[job],
     )
-    def s(context):
+    def failure_sensor(context):
 
         events = context.instance.get_event_records(
             EventRecordsFilter(
                 event_type=DagsterEventType.RUN_FAILURE,
-                after_timestamp=(datetime.now() - timedelta(minutes=lookback_minutes)).timestamp()
+                after_timestamp=(datetime.datetime.now() - datetime.timedelta(minutes=lookback_minutes)).timestamp()
             ),
             ascending=False,
-            limit=max_retries,
+            limit=1000000,
         )
-        processed = []
+
+        processed = set()
+
         for event in events:
+
             job_name = event.event_log_entry.job_name
-            if job_name != job:
+
+            if job_name != job.name:
                 continue
 
             run = context.instance.get_run_by_id(event.event_log_entry.run_id)
-            if run.run_id in processed:
-                continue
-
             attempt = int(run.tags.get("retry_attempt", 0))
 
-            if attempt < max_retries:
+            if attempt < max_retries and run.run_id not in processed:
+
+                print(f"Job name: {job_name}")
+                print(f"Run ID: {run.run_id}")
+                print(f"Previous attempts: {attempt}")
 
                 tags = run.tags
-                tags["retry_attempt"] = str(attempts + 1)
+                attempt = attempt + 1
+                tags["retry_attempt"] = str(attempt)
+
+                run_id_parts = run.run_id.split("-")
+                if len(run_id_parts) == 5:
+                    run_id = f"{run.run_id}-{0}"
+                else:
+                    run_id = "-".join(run_id_parts[0:6]) + f"-{attempt}"
+
+                print(f"Retrying: {run_id}")
 
                 yield RunRequest(
-                    run_key=run_info.run_id,
+                    run_key=run_id,
                     job_name=job_name,
                     run_config=run.run_config,
                     tags=tags,
@@ -214,9 +228,9 @@ def build_job_failure_sensor(job, lookback_minutes, max_retries, notifier_conf):
 
                 class_obj(**init).notify(f"Failed to run job {job_name} after {max_retries} retries")
 
-            processed.append(run.run_id)
+            processed.add(run.run_id)
 
-    return s
+    return failure_sensor
 
 
 def parse_yaml(content):
