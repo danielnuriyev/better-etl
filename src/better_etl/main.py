@@ -13,11 +13,12 @@ from dagster import asset_sensor, job, repository, schedule, sensor, build_resou
 from dagster import AssetKey, Backoff, DagsterEventType, EventRecordsFilter, RetryPolicy, RunRequest
 
 from better_etl.resources.cache import cache
+from better_etl.utils.reflect import create_instance
 
 def build_job(job_conf):
 
     job_name = job_conf["name"]
-    cache_conf = job_conf.get("cache", None)
+    resources_conf = job_conf.get("resources", None)
     job_retry = job_conf.get("retry", {})
     job_retry_max = job_retry.get("max", 0)
     job_retry_delay = job_retry.get("delay", 0)
@@ -28,12 +29,16 @@ def build_job(job_conf):
     ops_list = job_conf["ops"]
     ops_dict = {}
     job_conf = {"ops": {}}
-    if cache_conf:
-        job_conf["resources"] = {
-            "cache": {
-                "config" : cache_conf
+    if resources_conf:
+        job_conf["resources"] = {}
+        if "notifier" in resources_conf:
+            job_conf["resources"]["notifier"]: {
+                "config": resources_conf["notifier"]
             }
-        }
+        if "cache" in resources_conf:
+            job_conf["resources"]["cache"]: {
+                "config": resources_conf["cache"]
+            }
 
     for op_conf in ops_list:
         if "config" not in op_conf:
@@ -221,15 +226,10 @@ def build_job_failure_sensor(job, lookback_minutes, max_retries, notifier_conf):
 
             elif notifier_conf is not None:
 
-                package_name = notifier_conf["package"]
                 class_name = notifier_conf["class"]
-
-                package_obj = importlib.import_module(package_name)
-                class_obj = getattr(package_obj, class_name)
-
                 init = notifier_conf.get("config", {})
 
-                class_obj(**init).notify(f"Failed to run job {job_name} after {max_retries} retries")
+                create_instance(class_name, **init).notify(f"Failed to run job {job_name} after {max_retries} retries")
 
             processed.add(run.run_id)
 
@@ -250,7 +250,7 @@ def parse_yaml(content):
     return content
 
 
-# @repository
+@repository
 def repo():
 
     conf_path = os.path.join(os.getcwd(), "conf", "local.yaml")

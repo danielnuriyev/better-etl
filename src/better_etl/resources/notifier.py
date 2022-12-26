@@ -4,7 +4,7 @@ from dagster import resource
 from better_etl.utils.reflect import create_instance
 
 @resource
-def cache(context):
+def notifier(context):
 
     if context.resource_config:
         class_name = context.resource_config.pop("class", None)
