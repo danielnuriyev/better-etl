@@ -37,7 +37,6 @@ class MySQLSource(Source):
         """
 
         self.logger=logger
-        self.logger.info(f"Source {time.time()}")
         self._created = time.time()
 
         self.__dict__.update(kwargs)
@@ -54,12 +53,15 @@ class MySQLSource(Source):
         self._con = None
         self._cache_key = f"{self.host}:{self.port}/{self.database}/{self.table}"
 
-    @retry
+        self.logger.info("MySQLSource.__init__ done")
+
     def _connect(self):
         if not self._con:
             self._con = mysql.connector.connect(host=self.host, port=self.port, user=self.user,
                                                password=self.password,
                                                database=self.database)
+
+        self.logger.info("MySQLSource._connect done")
         return self._con
 
     @retry
@@ -67,12 +69,13 @@ class MySQLSource(Source):
         self.logger.info(f"Source {time.time()} CLOSING")
         if self._con:
             self._con.close()
+        self.logger.info("MySQLSource.close done")
 
-    @retry
     def get_columns(self):
         try:
             cur = self._connect().cursor(dictionary=True)
             cur.execute(f"SHOW columns FROM {self.database}.{self.table}")
+            self.logger.info("MySQLSource.get_columns done")
             return cur.fetchall()
         except Exception as e:
             self.logger.error(f"Failed: {e}")
@@ -88,12 +91,13 @@ class MySQLSource(Source):
                 if column["Key"] == "PRI":
                     keys.append(column["Field"])
             self.unique_keys = keys
+        self.logger.info("MySQLSource.primary_keys done")
         return self.unique_keys
 
     def get_last_keys(self):
+        self.logger.info("MySQLSource.get_last_keys done")
         return self.cache.get(self._cache_key)
 
-    @retry
     def next_batch(self) -> dict:
 
         self.logger.info(f"Source {time.time()} START")

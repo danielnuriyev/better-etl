@@ -31,12 +31,14 @@ def build_job(job_conf):
     job_conf = {"ops": {}}
     if resources_conf:
         job_conf["resources"] = {}
+        """
         if "notifier" in resources_conf:
-            job_conf["resources"]["notifier"]: {
+            job_conf["resources"]["notifier"] = {
                 "config": resources_conf["notifier"]
             }
+        """
         if "cache" in resources_conf:
-            job_conf["resources"]["cache"]: {
+            job_conf["resources"]["cache"] = {
                 "config": resources_conf["cache"]
             }
 
@@ -96,7 +98,6 @@ def build_job(job_conf):
                         prev_return = op_returns[prev_name]
                         if op_metas[prev_name]["return"]["dynamic"]:
                             op_returns[op_name] = prev_return.map(cur_op).collect()
-                            print(f"{op_name}.collect({prev_name})")
                             break
                         else:
                             cur_returns.append(prev_return)
@@ -244,8 +245,6 @@ def parse_yaml(content):
     content = content[match.end():]
     template = Template(content)
     content = template.substitute(**mapping)
-
-    print(content)
 
     return content
 
