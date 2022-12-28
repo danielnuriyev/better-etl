@@ -1,4 +1,5 @@
 import functools
+import inspect
 import logging
 import time
 
@@ -12,7 +13,11 @@ def retry(init_sleep=1, max_sleep=900):
             total_sleep = 0
             while True:
                 try:
-                    return func(*args, **kwargs)
+                    if inspect.isgeneratorfunction(func):
+                        for i in inspect.isgeneratorfunction:
+                            yield i
+                    else:
+                        return func(*args, **kwargs)
                 except Exception as e:
                     current_sleep += init_sleep
                     _logger.warning(f"Sleeping for {current_sleep} seconds before executing {func}")
