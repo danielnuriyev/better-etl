@@ -13,6 +13,7 @@ from dagster import asset_sensor, job, repository, schedule, sensor, build_resou
 from dagster import AssetKey, Backoff, DagsterEventType, EventRecordsFilter, RetryPolicy, RunRequest
 
 from better_etl.resources.cache import cache
+from better_etl.resources.notifier import notifier
 from better_etl.utils.reflect import create_instance
 
 def build_job(job_conf):
@@ -31,12 +32,10 @@ def build_job(job_conf):
     job_conf = {"ops": {}}
     if resources_conf:
         job_conf["resources"] = {}
-        """
         if "notifier" in resources_conf:
             job_conf["resources"]["notifier"] = {
                 "config": resources_conf["notifier"]
             }
-        """
         if "cache" in resources_conf:
             job_conf["resources"]["cache"] = {
                 "config": resources_conf["cache"]
@@ -56,7 +55,6 @@ def build_job(job_conf):
 
     def dive(op_names, op_returns, depth):
         for op_name in op_names:
-            # print(op_name)
             op_conf = ops_dict[op_name]
             package_name = op_conf["package"]
             if package_name not in op_packages:
@@ -74,8 +72,6 @@ def build_job(job_conf):
 
             method_name = op_conf["method"]
             if method_name not in op_metas:
-                # print(class_inst)
-                # print(class_inst.get_op_metadata()[method_name])
                 if hasattr(class_inst, "get_op_metadata"):
                     op_meta = class_inst.get_op_metadata()[method_name]
                 else:
@@ -108,7 +104,8 @@ def build_job(job_conf):
         config=job_conf,
         name=job_name,
         resource_defs={
-            "cache": cache
+            "cache": cache,
+            "notifier": notifier
         },
         op_retry_policy=RetryPolicy(
             max_retries=job_retry_max,
@@ -268,9 +265,12 @@ def repo():
 
     return r
 
+from better_etl.utils.decorators import retry
 
+@retry
 def main() -> int:
-    r = repo()
+    print("OK")
+    # r = repo()
     # j = r[0]
     # j.execute_in_process()
     

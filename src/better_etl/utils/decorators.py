@@ -5,16 +5,19 @@ import time
 
 _logger = logging.getLogger(__name__)
 
-def retry(init_sleep=1, max_sleep=900):
+def retry(_func=None, *, init_sleep=1, max_sleep=900):
+    print("IN RETRY")
     def retry_decorator(func):
+        print("IN retry_decorator")
         @functools.wraps(func)
         def wrapper_decorator(*args, **kwargs):
+            print("IN wrapper_decorator")
             current_sleep = 0
             total_sleep = 0
             while True:
                 try:
                     if inspect.isgeneratorfunction(func):
-                        for i in inspect.isgeneratorfunction:
+                        for i in func(*args, **kwargs):
                             yield i
                     else:
                         return func(*args, **kwargs)
@@ -29,4 +32,8 @@ def retry(init_sleep=1, max_sleep=900):
                         raise msg
 
         return wrapper_decorator
-    return retry_decorator
+
+    if _func is None:
+        return retry_decorator
+    else:
+        return retry_decorator(_func)

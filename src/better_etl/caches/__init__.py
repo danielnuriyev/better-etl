@@ -1,4 +1,3 @@
-print("caches")
 
 from better_etl.caches.cache import NoneCache
 from better_etl.caches.cache import Cache
