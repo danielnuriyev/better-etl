@@ -6,21 +6,24 @@ import time
 _logger = logging.getLogger(__name__)
 
 def retry(_func=None, *, init_sleep=1, max_sleep=900):
-    print("IN RETRY")
-    def retry_decorator(func):
-        print("IN retry_decorator")
+    def function_decorator(func):
         @functools.wraps(func)
-        def wrapper_decorator(*args, **kwargs):
-            print("IN wrapper_decorator")
+        def argument_decorator(*args, **kwargs):
+            print(func)
+            print(inspect.isgeneratorfunction(func))
             current_sleep = 0
             total_sleep = 0
             while True:
                 try:
+
                     if inspect.isgeneratorfunction(func):
-                        for i in func(*args, **kwargs):
-                            yield i
+                        def g():
+                            for i in func(*args, **kwargs):
+                                yield i
+                        return g()
                     else:
                         return func(*args, **kwargs)
+
                 except Exception as e:
                     current_sleep += init_sleep
                     _logger.warning(f"Sleeping for {current_sleep} seconds before executing {func}")
@@ -31,9 +34,9 @@ def retry(_func=None, *, init_sleep=1, max_sleep=900):
                         _logger.error(msg)
                         raise msg
 
-        return wrapper_decorator
+        return argument_decorator
 
     if _func is None:
-        return retry_decorator
+        return function_decorator
     else:
-        return retry_decorator(_func)
+        return function_decorator(_func)

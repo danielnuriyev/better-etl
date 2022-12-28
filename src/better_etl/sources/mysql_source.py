@@ -96,7 +96,9 @@ class MySQLSource(Source):
 
     def get_last_keys(self):
         self.logger.info("MySQLSource.get_last_keys done")
-        return self.cache.get(self._cache_key)
+        r = self.cache.get(self._cache_key)
+        print(r)
+        return r
 
     def next_batch(self) -> dict:
 

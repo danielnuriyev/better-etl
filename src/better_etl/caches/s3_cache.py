@@ -18,6 +18,7 @@ class S3Cache:
 
     @retry
     def get(self, k):
+        print("S3Cache.get")
         full_path = f"{self.path}/{k}"
         object = self.s3.Object(self.bucket, full_path)
         try:
