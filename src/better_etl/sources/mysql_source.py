@@ -55,6 +55,7 @@ class MySQLSource(Source):
 
         self.logger.info("MySQLSource.__init__ done")
 
+    @retry
     def _connect(self):
         if not self._con:
             self._con = mysql.connector.connect(host=self.host, port=self.port, user=self.user,
@@ -71,6 +72,7 @@ class MySQLSource(Source):
             self._con.close()
         self.logger.info("MySQLSource.close done")
 
+    @retry
     def get_columns(self):
         try:
             cur = self._connect().cursor(dictionary=True)
@@ -100,6 +102,7 @@ class MySQLSource(Source):
         print(r)
         return r
 
+    @retry
     def next_batch(self) -> dict:
 
         self.logger.info(f"Source {time.time()} START")
