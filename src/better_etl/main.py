@@ -26,10 +26,9 @@ def build_job(job_conf):
     job_retry_backoff = job_retry.get("backoff", "linear")
     job_retry_lookback = job_retry.get("lookback_minutes", 0)
     job_retry_notifier_conf = job_retry.get("notifier", None)
-
     ops_list = job_conf["ops"]
-    ops_dict = {}
     job_conf = {"ops": {}}
+
     if resources_conf:
         job_conf["resources"] = {}
         if "notifier" in resources_conf:
@@ -40,6 +39,9 @@ def build_job(job_conf):
             job_conf["resources"]["cache"] = {
                 "config": resources_conf["cache"]
             }
+
+
+    ops_dict = {}
 
     for op_conf in ops_list:
         if "config" not in op_conf:
@@ -248,28 +250,28 @@ def parse_yaml(content):
 
 @repository
 def repo():
+    conf_dir = os.path.join(os.getcwd(), "conf")
+    r = []
+    for file_name in os.listdir(config_root_dir):
+        with open(conf_path) as f:
+            content = f.read()
+            content = parse_yaml(content)
+            job_conf = yaml.safe_load(content)
 
-    conf_path = os.path.join(os.getcwd(), "conf", "local.yaml")
-    with open(conf_path) as f:
-        content = f.read()
-        content = parse_yaml(content)
-        job_conf = yaml.safe_load(content)
+        dagster_job_conf, j, failure_sensor = build_job(job_conf)
 
-    dagster_job_conf, j, failure_sensor = build_job(job_conf)
+        r.append(j)
+        r.append(failure_sensor)
 
-    r = [j, failure_sensor]
-
-    s = build_schedule(job_conf, dagster_job_conf, j)
-    if s:
-        r.append(s)
+        s = build_schedule(job_conf, dagster_job_conf, j)
+        if s:
+            r.append(s)
 
     return r
 
-from better_etl.utils.decorators import retry
-
-@retry
 def main() -> int:
-    print("OK")
+    conf_path = os.path.join(os.getcwd(), "conf", "*.yaml")
+    print(conf_path)
     # r = repo()
     # j = r[0]
     # j.execute_in_process()

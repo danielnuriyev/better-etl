@@ -17,7 +17,6 @@ class AWSS3:
         }
 
     @dagster.op(
-        required_resource_keys={"cache"},
         retry_policy=dagster.RetryPolicy(max_retries=2, delay=1, backoff=dagster.Backoff(dagster.Backoff.EXPONENTIAL))
     )
     @condition

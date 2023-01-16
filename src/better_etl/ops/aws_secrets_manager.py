@@ -18,7 +18,7 @@ class AWSSecretsManager:
 
     @dagster.op(retry_policy=dagster.RetryPolicy(max_retries=2, delay=1, backoff=dagster.Backoff(dagster.Backoff.EXPONENTIAL)))
     @condition
-    def get_secret(context: dagster.OpExecutionContext) -> typing.Dict:
+    def get_secret(context: dagster.OpExecutionContext, args) -> typing.Dict:
 
         context.log.info("get_aws_secret")
         secret_name = context.solid_config["secret_name"]
