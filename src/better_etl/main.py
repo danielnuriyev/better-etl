@@ -173,8 +173,8 @@ def build_schedule(job_conf, dagster_job_conf, job_func):
 def build_job_failure_sensor(job, lookback_minutes, max_retries, notifier_conf):
 
     @sensor(
-        description="Handle job failure",
-        jobs=[job],
+        name=f"{job.name}_failure_sensor",
+        job=job,
     )
     def failure_sensor(context):
 
@@ -252,7 +252,12 @@ def parse_yaml(content):
 def repo():
     conf_dir = os.path.join(os.getcwd(), "conf")
     r = []
-    for file_name in os.listdir(config_root_dir):
+    jobs = {}
+    for file_name in os.listdir(conf_dir):
+
+        if not file_name.endswith(".yaml"): continue
+
+        conf_path = os.path.join(conf_dir, file_name)
         with open(conf_path) as f:
             content = f.read()
             content = parse_yaml(content)
@@ -263,15 +268,14 @@ def repo():
         r.append(j)
         r.append(failure_sensor)
 
+
         s = build_schedule(job_conf, dagster_job_conf, j)
         if s:
             r.append(s)
 
     return r
 
-def main() -> int:
-    conf_path = os.path.join(os.getcwd(), "conf", "*.yaml")
-    print(conf_path)
+def main() -> int: pass
     # r = repo()
     # j = r[0]
     # j.execute_in_process()
