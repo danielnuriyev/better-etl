@@ -34,62 +34,41 @@ class Utils:
     )
     def check_previous_run(context: dagster.OpExecutionContext):
 
-        all_events: Iterable[dagster.EventLogRecord] = []
+        job_name = context.solid_config["job_name"]
 
-        for event_type in dagster._core.events.PIPELINE_EVENTS:
-
-            events: Iterable[dagster.EventLogRecord] = context.instance.get_event_records(
-                # Only get failure events < 1hr old
-                dagster.EventRecordsFilter(
-                    event_type=event_type,
-                    before_timestamp=datetime.datetime.now().timestamp()
+        previous_runs = []
+        for run_record in context.instance.get_run_records(
+                filters=dagster.RunsFilter(
+                    job_name=job_name,
+                    # statuses=[DagsterRunStatus.SUCCESS],
+                    # updated_after=midnight,
                 ),
                 ascending=False,
-                limit=10, # this should equal the number of jobs
-            )
-            if len(events) > 0:
-                all_events.extend(events)
+                limit=2
+        ):
+            previous_runs.append(run_record)
 
-        if len(all_events) > 0:
-            _events = []
-            job_name = context.solid_config["job_name"]
-            for event in all_events:
-                if event.event_log_entry.pipeline_name == job_name:
-                    _events.append(event)
-            all_events = _events
+        if len(previous_runs) == 2:
 
-        if len(all_events) > 0:
+            latest_event = previous_runs[-1]
 
-            def sort_key(event):
-                return event.event_log_entry.timestamp
+            finished_states = [
+                dagster.DagsterRunStatus.QUEUED,
+                dagster.DagsterRunStatus.NOT_STARTED,
+                dagster.DagsterRunStatus.MANAGED,
+                dagster.DagsterRunStatus.STARTING,
+                dagster.DagsterRunStatus.STARTED,
+                dagster.DagsterRunStatus.CANCELING,
+            ]
 
-            all_events.sort(key=sort_key)
+            context.log.info(latest_event.pipeline_run.status.name)
 
-            latest_event = all_events[-1]
+            if latest_event.pipeline_run.status.name in finished_states:
 
-            context.log.info(latest_event.event_log_entry.run_id)
+                context.resources.notifier.notify(f"Previous run not finished for {job_name} job")
 
-            for event in reversed(all_events):
+                raise Exception("Previous run not finished")
 
-                context.log.info(event.event_log_entry.run_id)
-                context.log.info(event.event_log_entry.dagster_event.event_type_value)
-
-                if event.event_log_entry.run_id != latest_event.event_log_entry.run_id:
-
-                    context.log.info("IN")
-
-                    finished_states = [
-                        dagster.DagsterEventType.RUN_SUCCESS,
-                        dagster.DagsterEventType.RUN_FAILURE,
-                        dagster.DagsterEventType.RUN_CANCELED
-                    ]
-
-                    if event.event_log_entry.dagster_event.event_type_value not in finished_states:
-
-                        context.resources.notifier.notify(f"Previous run not finished for {job_name} job")
-                        raise "Previous run not finished"
-
-                    break
 
     @dagster.op
     def empty(context: dagster.OpExecutionContext): pass
