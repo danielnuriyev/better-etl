@@ -18,7 +18,12 @@ from better_etl.utils.reflect import create_instance
 
 def build_job(job_conf):
 
+    name_re = "^[A-Za-z0-9_]+$"
+
     job_name = job_conf["name"]
+    if not re.match(name_re, job_name):
+        raise Exception(f"Invalid job name: {job_name}")
+
     resources_conf = job_conf.get("resources", None)
     job_retry = job_conf.get("retry", {})
     job_retry_max = job_retry.get("max", 0)
@@ -40,16 +45,21 @@ def build_job(job_conf):
                 "config": resources_conf["cache"]
             }
 
-
     ops_dict = {}
 
     for op_conf in ops_list:
+
+        op_name = op_conf["name"]
+
+        if not re.match(name_re,op_name):
+            raise Exception(f"Invalid op name: {job_name}.{op_name}")
+
         if "config" not in op_conf:
             op_conf["config"] = {}
 
         op_conf["config"]["job_name"] = job_name
-        job_conf["ops"][op_conf["name"]] = {"config": op_conf["config"]}
-        ops_dict[op_conf["name"]] = op_conf
+        job_conf["ops"][op_name] = {"config": op_conf["config"]}
+        ops_dict[op_name] = op_conf
 
     op_packages = {}
     op_classes = {}
