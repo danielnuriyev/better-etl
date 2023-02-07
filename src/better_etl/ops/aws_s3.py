@@ -1,9 +1,12 @@
 import dagster
+import logging
 import time
 import typing
 import uuid
 
 from better_etl.ops.op_wrappers import condition
+
+import boto3
 
 class AWSS3:
 
@@ -20,8 +23,36 @@ class AWSS3:
         retry_policy=dagster.RetryPolicy(max_retries=2, delay=1, backoff=dagster.Backoff(dagster.Backoff.EXPONENTIAL))
     )
     @condition
-    def store(context: dagster.OpExecutionContext, batch: typing.Dict):
+    def store(context: dagster.OpExecutionContext, batch):
 
-        # TODO
+        bucket = context.solid_config["bucket"]
+        path = context.solid_config["path"]
+        if bucket[-1] == "/": bucket = bucket[:-1]
+        if path[0] == "/": path = path[1:]
+        if path[-1] == "/": path = path[:-1]
+        timestamp = time.strftime("%y%m%d%H%M%S")
+        uid = str(uuid.uuid4())
+        key = f"{path}/{timestamp}-{uid}.parquet"
+        url = f"s3://{bucket}/{key}"
+        batch["data"].to_parquet(url)
+        batch.pop("data")
+
+        response = boto3.client('s3').get_object_attributes(
+            Bucket=bucket,
+            Key=key,
+            ObjectAttributes=[
+                "ObjectSize"
+            ]
+        )
+
+        size = response["ObjectSize"]
+
+        batch["metadata"]["s3"] = {
+            "bucket": bucket,
+            "key": key,
+            "size": size
+        }
+
+        context.log.info(batch)
 
         return batch

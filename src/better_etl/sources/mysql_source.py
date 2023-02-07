@@ -2,6 +2,7 @@ import logging
 import os
 import psutil
 import time
+from typing import List
 
 import mysql.connector
 import pandas as pd
@@ -44,7 +45,7 @@ class MySQLSource(Source):
         self.port = port
         self.table = table
         self.unique_keys = unique_keys
-        self.columns = ",".join(map(lambda item: item.strip(), columns.split(",")))
+        self.columns = ",".join(map(lambda item: item.strip(), columns.split(","))).strip().lower()
         self.limit = limit
         self.sleep = sleep
         self.max_sleep = max_sleep
@@ -54,6 +55,9 @@ class MySQLSource(Source):
         self._cache_key = f"{self.host}:{self.port}/{self.database}/{self.table}"
 
         self.logger.info("MySQLSource.__init__ done")
+
+        self.table_columns = None # all columns of the table
+        self._query_columns = None # explicit list of columns in the query
 
     @retry
     def _connect(self):
@@ -73,22 +77,33 @@ class MySQLSource(Source):
         self.logger.info("MySQLSource.close done")
 
     @retry
-    def get_columns(self):
-        try:
-            cur = self._connect().cursor(dictionary=True)
-            cur.execute(f"SHOW columns FROM {self.database}.{self.table}")
-            self.logger.info("MySQLSource.get_columns done")
-            return cur.fetchall()
-        except Exception as e:
-            self.logger.error(f"Failed: {e}")
-            raise e
-        finally:
-            cur.close()
+    def get_table_columns(self):
+        if not self.table_columns:
+            try:
+                cur = self._connect().cursor(dictionary=True)
+                cur.execute(f"SHOW columns FROM {self.database}.{self.table}")
+                self.table_columns = cur.fetchall()
+            except Exception as e:
+                self.logger.error(f"Failed: {e}")
+                raise e
+            finally:
+                cur.close()
+        return self.table_columns
 
-    def primary_keys(self):
+    def _get_query_columns(self):
+        if not self._query_columns:
+            query_columns = []
+            for column in self.get_table_columns():
+                if self.columns == "*" or column["Field"] in self.columns:
+                    query_columns.append(column)
+            self._query_columns = query_columns
+
+        return self._query_columns
+
+    def primary_keys(self) -> List[str]:
         if not self.unique_keys:
             keys = []
-            columns = self.get_columns()
+            columns = self.get_table_columns()
             for column in columns:
                 if column["Key"] == "PRI":
                     keys.append(column["Field"])
@@ -109,6 +124,7 @@ class MySQLSource(Source):
 
         select = f"SELECT {self.columns} FROM {self.database}.{self.table}"
         keys = self.primary_keys()
+        columns = self._get_query_columns()
         cur = self._connect().cursor(dictionary=True)
 
         next = True
@@ -205,7 +221,9 @@ class MySQLSource(Source):
                         "type": "data",
                         "format": "pandas.dataframe",
                         "last_keys": last_keys,
-                        "cache_key": self._cache_key
+                        "cache_key": self._cache_key,
+                        "keys": keys,
+                        "columns": columns
                     }
                 }
 

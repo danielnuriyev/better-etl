@@ -267,6 +267,8 @@ def repo():
 
         if not file_name.endswith(".yaml"): continue
 
+        print(file_name)
+
         conf_path = os.path.join(conf_dir, file_name)
         with open(conf_path) as f:
             content = f.read()
@@ -281,6 +283,7 @@ def repo():
 
         s = build_schedule(job_conf, dagster_job_conf, j)
         if s:
+            r.append(s)
             r.append(s)
 
     return r
