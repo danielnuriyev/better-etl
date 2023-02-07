@@ -1,0 +1,62 @@
+{
+  "t": time.time(),
+  "table": "<table name>"
+}
+name: reloaded_example
+# schedule: 0 * * * *
+retry:
+  max: 2
+  delay: 1
+  backoff: exponential
+  lookback_minutes: 1
+  notifier:
+    class: better_etl.notifiers.notifier.Notifier
+resources:
+  notifier:
+    class:  better_etl.notifiers.notifier.Notifier
+ops:
+  - name: check_previous_run
+    package:  better_etl.ops
+    class:    Utils
+    method:   check_previous_run
+  - name: get_secret
+    after:
+      - check_previous_run
+    package:  better_etl.ops
+    class:    AWSSecretsManager
+    method:   get_secret
+    config:
+      secret_name: <secret name>
+  - name: get_batches
+    after:
+      - get_secret
+    package:  better_etl.ops
+    class:    MySQL
+    method:   get_batches
+    config:
+      host:     <host>
+      database: <db>
+      table:    $table
+      batch:    1000000
+  - name: store_batches
+    after:
+      - get_batches
+    package:  better_etl.ops
+    class:    AWSS3
+    method:   store
+    config:
+      bucket: <my bucket>
+      path:   tables/$table/$t
+      condition: >
+        batch["data"].size > 0 and
+        batch["data"].size < 1000000
+  - name: compact
+    after:
+      - store_batches
+    package: better_etl.ops
+    class: Parquet
+    method: compact
+    config:
+      bucket: <my bucket>
+      path: tables/$table/$t
+      size: 128M
