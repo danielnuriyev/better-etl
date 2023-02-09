@@ -32,24 +32,27 @@ class AWSS3:
         if path[-1] == "/": path = path[:-1]
         timestamp = time.strftime("%y%m%d%H%M%S")
         uid = str(uuid.uuid4())
-        key = f"{path}/{timestamp}-{uid}.parquet"
-        url = f"s3://{bucket}/{key}"
+        filename = f"{timestamp}-{uid}.parquet"
+        url = f"s3://{bucket}/{path}/{filename}"
         batch["data"].to_parquet(url)
+
+        batch["metadata"]["memory"] = batch["data"].memory_usage(deep=True).sum()
+
         batch.pop("data")
 
         response = boto3.client('s3').get_object_attributes(
             Bucket=bucket,
-            Key=key,
+            Key=f"{path}/{filename}",
             ObjectAttributes=[
                 "ObjectSize"
             ]
         )
-
         size = response["ObjectSize"]
 
         batch["metadata"]["s3"] = {
             "bucket": bucket,
-            "key": key,
+            "path": path,
+            "filename": filename,
             "size": size
         }
 
