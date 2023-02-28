@@ -25,8 +25,8 @@ class AWSS3:
     @condition
     def store(context: dagster.OpExecutionContext, batch):
 
-        bucket = context.solid_config["bucket"]
-        path = context.solid_config["path"]
+        bucket = context.op_config["bucket"]
+        path = context.op_config["path"]
         if bucket[-1] == "/": bucket = bucket[:-1]
         if path[0] == "/": path = path[1:]
         if path[-1] == "/": path = path[:-1]
@@ -52,8 +52,8 @@ class AWSS3:
         batch["metadata"]["s3"] = {
             "bucket": bucket,
             "path": path,
-            "filename": filename,
-            "size": size
+            "file_name": filename,
+            "file_size": size
         }
 
         context.log.info(batch)

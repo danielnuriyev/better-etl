@@ -59,4 +59,5 @@ ops:
     config:
       bucket: <my bucket>
       path: tables/$table/$t
-      size: 128M
+      max_memory: 4000000000
+      max_file_size : 128000000

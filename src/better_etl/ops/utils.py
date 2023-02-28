@@ -34,7 +34,7 @@ class Utils:
     )
     def check_previous_run(context: dagster.OpExecutionContext):
 
-        job_name = context.solid_config["job_name"]
+        job_name = context.op_config["job_name"]
 
         previous_runs = []
         for run_record in context.instance.get_run_records(

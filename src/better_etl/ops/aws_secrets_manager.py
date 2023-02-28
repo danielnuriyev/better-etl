@@ -21,7 +21,7 @@ class AWSSecretsManager:
     def get_secret(context: dagster.OpExecutionContext, args) -> typing.Dict:
 
         context.log.info("get_aws_secret")
-        secret_name = context.solid_config["secret_name"]
+        secret_name = context.op_config["secret_name"]
         session = boto3.Session()
         client = session.client("secretsmanager")
         response = client.get_secret_value(SecretId=secret_name)

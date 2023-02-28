@@ -9,7 +9,7 @@ def condition(func):
         for key, val in kwargs.items():
             exec(key + '=val')
 
-        condition = context.solid_config.get("condition", None)
+        condition = context.op_config.get("condition", None)
         if condition and not eval(condition):
             context.log.info(f"Skipping {condition}")
             return None

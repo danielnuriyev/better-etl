@@ -31,12 +31,12 @@ class MySQL:
         context.log.info(context.resources.cache)
 
         c = MySQLSource(
-            host=context.solid_config["host"],
+            host=context.op_config["host"],
             user=secret["username"],
             password=secret["password"],
-            database=context.solid_config["database"],
-            table=context.solid_config["table"],
-            limit=context.solid_config["batch"],
+            database=context.op_config["database"],
+            table=context.op_config["table"],
+            limit=context.op_config["batch"],
             stream=False,  # for a small table that will not overfill the local storage, one can use False
             logger=context.log,
             cache=context.resources.cache
@@ -45,7 +45,7 @@ class MySQL:
         context.log.info(c)
         context.log.info(c.next_batch())
 
-        max_matches = context.solid_config.get("batches", None)
+        max_matches = context.op_config.get("batches", None)
         batch_count = 0
 
         for batch in c.next_batch():

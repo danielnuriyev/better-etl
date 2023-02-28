@@ -48,8 +48,8 @@ class AWSAthena:
     @condition
     def drop_table(context: dagster.OpExecutionContext, args):
 
-        database = context.solid_config["database"]
-        table = context.solid_config["table"]
+        database = context.op_config["database"]
+        table = context.op_config["table"]
 
         q = f"DROP TABLE IF EXISTS {database}.{table}"
 
