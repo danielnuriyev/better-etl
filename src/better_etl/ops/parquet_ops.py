@@ -7,6 +7,7 @@ import uuid
 from better_etl.ops.op_wrappers import condition
 
 import boto3
+import humanfriendly
 import pandas as pd
 
 class Parquet:
@@ -54,8 +55,8 @@ class Parquet:
     @condition
     def compact(context: dagster.OpExecutionContext, batch):
 
-        max_memory = context.op_config["max_memory"]
-        max_file_size = context.op_config["max_file_size"]
+        max_memory = humanfriendly.parse_size(context.op_config["max_memory"])
+        max_file_size = humanfriendly.parse_size(context.op_config["max_file_size"])
 
         files = []
         dfs = []

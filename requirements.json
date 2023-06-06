@@ -4,6 +4,7 @@
     "dagit",
     "dagster",
     "fsspec",
+    "humanfriendly",
     "pandas",
     "psutil",
     "pyarrow",
