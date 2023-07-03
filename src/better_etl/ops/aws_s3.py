@@ -40,20 +40,10 @@ class AWSS3:
 
         batch.pop("data")
 
-        response = boto3.client('s3').get_object_attributes(
-            Bucket=bucket,
-            Key=f"{path}/{filename}",
-            ObjectAttributes=[
-                "ObjectSize"
-            ]
-        )
-        size = response["ObjectSize"]
-
         batch["metadata"]["s3"] = {
             "bucket": bucket,
             "path": path,
-            "file_name": filename,
-            "file_size": size
+            "file_name": filename
         }
 
         context.log.info(batch)

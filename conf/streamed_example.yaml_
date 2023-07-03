@@ -1,6 +1,6 @@
 {
   "t": time.time(),
-  "table": "<table>"
+  "table": "table"
 }
 name: streamed_example
 # schedule: 0-59 * * * *
@@ -16,8 +16,8 @@ resources:
     class:  better_etl.notifiers.notifier.Notifier
   cache:
     class:  better_etl.caches.S3Cache
-    bucket: <my bucket>
-    path:   dagster/jobs/streamed_example
+    bucket: <bucket>
+    path:   jobs/streamed_example
 ops:
   - name: check_previous_run
     package:  better_etl.ops
@@ -30,7 +30,7 @@ ops:
     class:    AWSSecretsManager
     method:   get_secret
     config:
-      secret_name: <secret name>
+      secret_name: <secret>
   - name: get_batches
     after:
       - get_secret
@@ -50,11 +50,11 @@ ops:
     class:    AWSS3
     method:   store
     config:
-      bucket: <my bucket>
-      path:   tables/$table/$t
+      bucket: <bucket>
+      path:   tables/$table
       condition: >
-        batch["data"].size > 0 and
-        batch["data"].size < 1000000
+        len(batch["data"]) > 0 and
+        len(batch["data"]) <= 1000000
   - name: find_last_keys
     after:
       - store_batches
@@ -70,3 +70,15 @@ ops:
     config:
       get_key: last_keys
       put_key: cache_key
+  - name: compact
+    after:
+      - store_batches
+    package: better_etl.ops
+    class: Parquet
+    method: compact
+    config:
+      bucket: <bucket>
+      path:   <path>
+      compact_path: True
+      max_memory: 4GiB
+      max_file_size : 128MiB

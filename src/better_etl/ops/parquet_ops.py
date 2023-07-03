@@ -1,14 +1,10 @@
+import boto3
 import dagster
-import logging
-import time
-import typing
-import uuid
 
 from better_etl.ops.op_wrappers import condition
+from better_etl.utils.compact import compact
 
-import boto3
 import humanfriendly
-import pandas as pd
 
 class Parquet:
 
@@ -21,34 +17,6 @@ class Parquet:
             }
         }
 
-    @classmethod
-    def _df_to_s3(cls, context, dfs, bucket, path, files):
-
-        df = pd.concat(dfs, ignore_index=True)
-        dfs.clear()
-
-        timestamp = time.strftime("%y%m%d%H%M%S")
-        uid = str(uuid.uuid4())
-        file_name = f"compacted-{timestamp}-{uid}.parquet"
-        url = f"s3://{bucket}/{path}/{file_name}"
-        context.log.info(f"Compacting into {url}")
-        df.to_parquet(url)
-        df = None
-
-        s3 = boto3.client('s3')
-        for file in files:
-            bucket = file["metadata"]["s3"]["bucket"]
-            path = file["metadata"]["s3"]["path"]
-            file_name = file["metadata"]["s3"]["file_name"]
-            key = f"{path}/{file_name}"
-            context.log.info(f"Deleting {bucket}/{key}")
-            s3.delete_object(
-                Bucket=bucket,
-                Key=key
-            )
-
-        return True
-
     @dagster.op(
         retry_policy=dagster.RetryPolicy(max_retries=2, delay=1, backoff=dagster.Backoff(dagster.Backoff.EXPONENTIAL))
     )
@@ -57,43 +25,48 @@ class Parquet:
 
         max_memory = humanfriendly.parse_size(context.op_config["max_memory"])
         max_file_size = humanfriendly.parse_size(context.op_config["max_file_size"])
+        output_bucket = context.op_config["bucket"]
+        output_path = context.op_config["path"]
 
-        files = []
-        dfs = []
-        merged_file_size = 0
-        merged_memory_size = 0
-        file_names = []
-        for file in batch:
+        compact_path = context.op_config.get("compact_path", False)
 
-            bucket = file["metadata"]["s3"]["bucket"]
-            path = file["metadata"]["s3"]["path"]
-            file_name = file["metadata"]["s3"]["file_name"]
-            file_size = file["metadata"]["s3"]["file_size"]
+        if compact_path:
 
-            file_names.append(file_name)
+            s3 = boto3.client('s3')
+            response = s3.list_objects_v2(
+                Bucket=output_bucket
+            )
+            contents = response["Contents"]
+            files = []
+            for content in contents:
+                size = content["Size"]
+                if size < max_file_size:
+                    key = content["Key"]
+                    files.append({
+                        "bucket": output_bucket,
+                        "key": key
+                    })
+            compact(files, max_memory, max_file_size, output_bucket, output_path)
 
-            url = f"s3://{bucket}/{path}/{file_name}"
+        else:
 
-            context.log.info(f"Loading {url}")
-            df = pd.read_parquet(url)
+            files = []
+            file_names = []
+            for file in batch:
 
-            merged_memory_size += df.memory_usage(index=True, deep=True).sum()
-            merged_file_size += file_size
+                bucket = file["metadata"]["s3"]["bucket"]
+                path = file["metadata"]["s3"]["path"]
+                file_name = file["metadata"]["s3"]["file_name"]
+                file_names.append(file_name)
 
-            if merged_memory_size >= max_memory or merged_file_size >= max_file_size:
+                key = f"{path}/{file_name}"
 
-                Parquet._df_to_s3(context, dfs, bucket, path, files)
+                files.append({
+                    "bucket": bucket,
+                    "key": key
+                })
 
-                merged_memory_size = 0
-                merged_file_size = 0
-                dfs.clear()
-                files.clear()
-
-            dfs.append(df)
-            files.append(file)
-
-        if len(dfs) > 0:
-            Parquet._df_to_s3(context, dfs, bucket, path, files)
+            compact(files, max_memory, max_file_size, output_bucket, output_path)
 
         return {
             "bucket": bucket,

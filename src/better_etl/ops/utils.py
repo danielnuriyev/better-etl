@@ -10,6 +10,8 @@ class Utils:
         max_item = {}
         cache_key = None
         for item in collection:
+            if not "metadata" in item:
+                continue
             metadata = item["metadata"]
             last_keys = metadata["last_keys"]
             for k in last_keys.keys():
@@ -61,13 +63,15 @@ class Utils:
                 dagster.DagsterRunStatus.CANCELING,
             ]
 
-            context.log.info(latest_event.pipeline_run.status.name)
+            if "pipeline_run" in latest_event:
 
-            if latest_event.pipeline_run.status.name in finished_states:
+                context.log.info(latest_event.pipeline_run.status.name)
 
-                context.resources.notifier.notify(f"Previous run not finished for {job_name} job")
+                if latest_event.pipeline_run.status.name in finished_states:
 
-                raise Exception("Previous run not finished")
+                    context.resources.notifier.notify(f"Previous run not finished for {job_name} job")
+
+                    raise Exception("Previous run not finished")
 
 
     @dagster.op
