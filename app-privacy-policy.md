@@ -1,2 +1,2 @@
-- The app does not require you to enter your real photo and name but whatever you enter is stored until you update it
+- The app does not require you to enter your real photo and name
 - All your activity is stored
