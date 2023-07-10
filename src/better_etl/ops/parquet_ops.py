@@ -33,20 +33,35 @@ class Parquet:
         if compact_path:
 
             s3 = boto3.client('s3')
+
             response = s3.list_objects_v2(
                 Bucket=output_bucket
             )
-            contents = response["Contents"]
-            files = []
-            for content in contents:
-                size = content["Size"]
-                if size < max_file_size:
-                    key = content["Key"]
-                    files.append({
-                        "bucket": output_bucket,
-                        "key": key
-                    })
-            compact(files, max_memory, max_file_size, output_bucket, output_path)
+
+            while True:
+
+                contents = response["Contents"]
+                files = []
+                for content in contents:
+                    size = content["Size"]
+                    if size < max_file_size:
+                        key = content["Key"]
+                        files.append({
+                            "bucket": output_bucket,
+                            "key": key
+                        })
+
+                compact(files, max_memory, max_file_size, output_bucket, output_path)
+
+                token = response.get("ContinuationToken", None)
+
+                if token:
+                    response = s3.list_objects_v2(
+                        Bucket=output_bucket,
+                        ContinuationToken=token
+                    )
+                else:
+                    break
 
         else:
 
