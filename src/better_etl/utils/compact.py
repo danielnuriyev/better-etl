@@ -54,10 +54,9 @@ def compact(files, max_memory, max_file_size, output_bucket, output_path):
 
         df = pd.read_parquet(url)
 
-        merged_memory_size += df.memory_usage(index=True, deep=True).sum()
-        merged_file_size += size
+        df_memory_size = df.memory_usage(index=True, deep=True).sum()
 
-        if merged_memory_size >= max_memory or merged_file_size >= max_file_size:
+        if merged_memory_size + df_memory_size >= max_memory or merged_file_size + size >= max_file_size:
             _df_to_s3(dfs, s3, output_bucket, output_path, files_to_delete)
 
             merged_memory_size = 0
@@ -67,6 +66,8 @@ def compact(files, max_memory, max_file_size, output_bucket, output_path):
 
         dfs.append(df)
         files_to_delete.append(file)
+        merged_memory_size += df_memory_size
+        merged_file_size += size
 
     if len(dfs) > 0:
         _df_to_s3(dfs, s3, output_bucket, output_path, files_to_delete)

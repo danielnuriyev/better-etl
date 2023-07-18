@@ -1,10 +1,13 @@
+import os
+
 import boto3
 import dagster
 
+import humanfriendly
+import psutil
+
 from better_etl.ops.op_wrappers import condition
 from better_etl.utils.compact import compact
-
-import humanfriendly
 
 class Parquet:
 
@@ -35,7 +38,8 @@ class Parquet:
             s3 = boto3.client('s3')
 
             response = s3.list_objects_v2(
-                Bucket=output_bucket
+                Bucket=output_bucket,
+                Prefix=output_path
             )
 
             while True:
@@ -51,7 +55,12 @@ class Parquet:
                             "key": key
                         })
 
+                context.log.info(f"Compacting {len(files)} files")
                 compact(files, max_memory, max_file_size, output_bucket, output_path)
+                pid = os.getpid()
+                process = psutil.Process(pid)
+                memory = process.memory_info().rss
+                context.log.info(f'Memory: {"{:,}".format(memory)}')
 
                 token = response.get("ContinuationToken", None)
 
@@ -81,14 +90,12 @@ class Parquet:
                     "key": key
                 })
 
+            context.log.info(f"Compacting {len(files)} files: {file_names}")
             compact(files, max_memory, max_file_size, output_bucket, output_path)
-
-        return {
-            "bucket": bucket,
-            "path": path,
-            "file_names": file_names
-        }
-
+            pid = os.getpid()
+            process = psutil.Process(pid)
+            memory = process.memory_info().rss
+            context.log.info(f'Memory: {"{:,}".format(memory)}')
 
 
 
