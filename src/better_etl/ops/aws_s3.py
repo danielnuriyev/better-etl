@@ -14,12 +14,13 @@ class AWSS3:
         return {
             "store": {
                 "return": {
-                    "dynamic": False
+                    "dynamic": True
                 }
             }
         }
 
     @dagster.op(
+        out=dagster.DynamicOut(),
         retry_policy=dagster.RetryPolicy(max_retries=2, delay=1, backoff=dagster.Backoff(dagster.Backoff.EXPONENTIAL))
     )
     @condition
@@ -27,25 +28,49 @@ class AWSS3:
 
         bucket = context.op_config["bucket"]
         path = context.op_config["path"]
+        partition = context.op_config.get("partition", None)
+
         if bucket[-1] == "/": bucket = bucket[:-1]
         if path[0] == "/": path = path[1:]
         if path[-1] == "/": path = path[:-1]
+
         timestamp = time.strftime("%y%m%d%H%M%S")
         uid = str(uuid.uuid4())
-        filename = f"{timestamp}-{uid}.parquet"
-        url = f"s3://{bucket}/{path}/{filename}"
-        batch["data"].to_parquet(url)
+        filename = f"{timestamp}-{uid}.parquet" # TODO: format should be configurable
 
-        batch["metadata"]["memory"] = batch["data"].memory_usage(deep=True).sum()
+        df = batch.pop("data")
 
-        batch.pop("data")
+        if partition:
+            partition = partition.get("column", None)
 
-        batch["metadata"]["s3"] = {
-            "bucket": bucket,
-            "path": path,
-            "file_name": filename
-        }
+        if partition:
+            for partition_value, partition_df in df.groupby(partition)
+                partition_path = f"s3://{bucket}/{path}/{partition_value}/"
+                url = f"{partition_path}/{filename}"
+                partition_df.to_parquet(url)
 
-        context.log.info(batch)
+                batch.copy()["metadata"]["s3"] = {
+                    "bucket": bucket,
+                    "path": partition_path,
+                    "file_name": filename
+                }
+                batch["metadata"]["memory"] = partition_df.memory_usage(deep=True).sum()
+                context.log.info(batch)
+                yield batch
 
-        return batch
+        else:
+            url = f"s3://{bucket}/{path}/{filename}"
+            df.to_parquet(url)
+
+            batch["metadata"]["s3"] = {
+                "bucket": bucket,
+                "path": path,
+                "file_name": filename
+            }
+            batch["metadata"]["memory"] = df.memory_usage(deep=True).sum()
+            context.log.info(batch)
+            yield batch
+
+
+
+

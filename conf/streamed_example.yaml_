@@ -1,6 +1,6 @@
 {
   "t": time.time(),
-  "table": "table"
+  "table": "<table name>"
 }
 name: streamed_example
 # schedule: 0-59 * * * *
@@ -43,9 +43,17 @@ ops:
       table:    $table
       batch:    1000000
       batches:  1
-  - name: store_batches
+  - name: partition
     after:
       - get_batches
+    class: Partition
+    method: timestamp_to_date # or any other method that generates a new partition column
+    config:
+      partition_by_column: <column to partition by, like date>
+      partition_column_name: <name of the generated partition column, like date_partitioned>
+  - name: store_batches
+    after:
+      - partition
     package:  better_etl.ops
     class:    AWSS3
     method:   store
