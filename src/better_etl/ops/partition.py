@@ -12,3 +12,11 @@ class Partition:
         batch[partition_column_name] = batch[partition_by_column].apply(lambda x: datetime.fromtimestamp(x).strftime("%Y-%m-%d"))
 
         return batch
+
+    @dagster.op()
+    def copy(context: dagster.OpExecutionContext, batch):
+        partition_by_column = context.op_config["partition_by_column"]
+        partition_column_name = context.op_config["partition_column_name"]
+        batch[partition_column_name] = batch[partition_by_column].copy()
+
+        return batch
