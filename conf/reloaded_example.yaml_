@@ -56,6 +56,7 @@ ops:
     package: better_etl.ops
     class: Parquet
     method: compact
+    collect: True
     config:
       bucket: <my bucket>
       path: tables/$table/$t

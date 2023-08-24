@@ -69,6 +69,7 @@ ops:
     package: better_etl.ops
     class: Utils
     method: find_last_keys
+    collect: True
   - name: store_last_keys
     after:
       - find_last_keys
@@ -84,6 +85,7 @@ ops:
     package: better_etl.ops
     class: Parquet
     method: compact
+    collect: True
     config:
       bucket: <bucket>
       path:   <path>

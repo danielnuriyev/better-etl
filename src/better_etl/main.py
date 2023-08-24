@@ -1,6 +1,5 @@
 import datetime
 import importlib
-import inspect
 import os
 import re
 import sys
@@ -102,15 +101,26 @@ def build_job(job_conf):
                     cur_op = getattr(class_inst, method_name).alias(op_name)
 
                     cur_returns = []
+                    cur_return_names = []
                     for prev_name in after_list:
                         prev_return = op_returns[prev_name]
-                        if op_metas[prev_name]["return"]["dynamic"]:
-                            op_returns[op_name] = prev_return.map(cur_op).collect()
+                        if op_metas[prev_name]["return"]["dynamic"] or "map" in ops_dict[prev_name]:
+                            tmp = prev_return.map(cur_op)
+                            print(f"{prev_name}.map({op_name})")
+                            ops_dict[op_name]["map"] = True
+                            if op_conf.get("collect", False):
+                                tmp = tmp.collect()
+                                print(f".collect()")
+                                ops_dict[op_name].pop("map")
+                            op_returns[op_name] = tmp
                             break
                         else:
                             cur_returns.append(prev_return)
-                    if op_name not in op_returns:
+                            cur_return_names.append(prev_name)
+
+                    if op_name not in op_returns: # not dynamic
                         op_returns[op_name] = cur_op(*cur_returns)
+                        print(f"{method_name}({', '.join(cur_return_names)})")
 
     @job(
         config=job_conf,
@@ -287,6 +297,58 @@ def repo():
             r.append(s)
 
     return r
+
+
+import uuid
+
+import dagster
+
+
+@dagster.op()
+def check_previous_run():
+    return 0
+
+
+@dagster.op()
+def get_secret(context: dagster.OpExecutionContext, data):
+    return 0
+
+
+@dagster.op(
+    out=dagster.DynamicOut()
+)
+def get_batches(context: dagster.OpExecutionContext, data):
+    for i in range(10):
+        key = uuid.uuid4().hex
+        yield dagster.DynamicOutput(i, mapping_key=key)
+
+
+@dagster.op()
+def partition(context: dagster.OpExecutionContext, data):
+    return 0
+
+
+@dagster.op()
+def store_batches(context: dagster.OpExecutionContext, data):
+    return 0
+
+
+@dagster.op()
+def find_last_keys(context: dagster.OpExecutionContext, data):
+    context.log.info(data)
+    return 0
+
+@job
+def test_job():
+
+    get_batches(get_secret(check_previous_run())).map(partition).map(store_batches).map(find_last_keys).collect()
+
+
+# @repository
+def test_repo():
+    jobs = [test_job]
+    return jobs
+
 
 def main() -> int: pass
     # r = repo()

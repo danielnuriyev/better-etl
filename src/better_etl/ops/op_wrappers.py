@@ -8,6 +8,7 @@ def condition(func):
 
         for key, val in kwargs.items():
             exec(key + '=val')
+            # exec(f'print({key})')
 
         condition = context.op_config.get("condition", None)
         if condition and not eval(condition):

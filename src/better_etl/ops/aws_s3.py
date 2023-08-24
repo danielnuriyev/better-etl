@@ -1,12 +1,10 @@
 import dagster
-import logging
+
 import time
-import typing
+
 import uuid
 
 from better_etl.ops.op_wrappers import condition
-
-import boto3
 
 class AWSS3:
 
@@ -14,17 +12,18 @@ class AWSS3:
         return {
             "store": {
                 "return": {
-                    "dynamic": True
+                    "dynamic": False
                 }
             }
         }
 
     @dagster.op(
-        out=dagster.DynamicOut(),
         retry_policy=dagster.RetryPolicy(max_retries=2, delay=1, backoff=dagster.Backoff(dagster.Backoff.EXPONENTIAL))
     )
     @condition
     def store(context: dagster.OpExecutionContext, batch):
+
+        context.log.info(batch)
 
         bucket = context.op_config["bucket"]
         path = context.op_config["path"]
@@ -35,7 +34,7 @@ class AWSS3:
         if path[-1] == "/": path = path[:-1]
 
         timestamp = time.strftime("%y%m%d%H%M%S")
-        uid = str(uuid.uuid4())
+        uid = str(uuid.uuid4().hex)
         filename = f"{timestamp}-{uid}.parquet" # TODO: format should be configurable
 
         df = batch.pop("data")
@@ -43,8 +42,9 @@ class AWSS3:
         if partition:
             partition = partition.get("column", None)
 
+        partitions = []
         if partition:
-            for partition_value, partition_df in df.groupby(partition)
+            for partition_value, partition_df in df.groupby(partition):
                 partition_path = f"s3://{bucket}/{path}/{partition_value}/"
                 url = f"{partition_path}/{filename}"
                 partition_df.to_parquet(url)
@@ -55,8 +55,9 @@ class AWSS3:
                     "file_name": filename
                 }
                 batch["metadata"]["memory"] = partition_df.memory_usage(deep=True).sum()
-                context.log.info(batch)
-                yield batch
+                # key = uuid.uuid4().hex
+                # yield dagster.DynamicOutput(batch, mapping_key=key)
+                partitions.append(batch)
 
         else:
             url = f"s3://{bucket}/{path}/{filename}"
@@ -68,9 +69,8 @@ class AWSS3:
                 "file_name": filename
             }
             batch["metadata"]["memory"] = df.memory_usage(deep=True).sum()
-            context.log.info(batch)
-            yield batch
+            # key = uuid.uuid4().hex
+            # yield dagster.DynamicOutput(batch, mapping_key=key)
+            partitions.append(batch)
 
-
-
-
+        return partitions
