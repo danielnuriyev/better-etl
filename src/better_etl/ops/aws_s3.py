@@ -23,11 +23,11 @@ class AWSS3:
     @condition
     def store(context: dagster.OpExecutionContext, batch):
 
-        context.log.info(batch)
+        # context.log.info(batch)
 
         bucket = context.op_config["bucket"]
         path = context.op_config["path"]
-        partition = context.op_config.get("partition", None)
+        partition = batch["metadata"]["partition_column_name"] # context.op_config.get("partition", None)
 
         if bucket[-1] == "/": bucket = bucket[:-1]
         if path[0] == "/": path = path[1:]
@@ -39,13 +39,13 @@ class AWSS3:
 
         df = batch.pop("data")
 
-        if partition:
-            partition = partition.get("column", None)
+        # if partition:
+        #    partition = partition.get("column", None)
 
         partitions = []
         if partition:
             for partition_value, partition_df in df.groupby(partition):
-                partition_path = f"s3://{bucket}/{path}/{partition_value}/"
+                partition_path = f"s3://{bucket}/{path}/{partition_value}"
                 url = f"{partition_path}/{filename}"
                 partition_df.to_parquet(url)
 

@@ -1,7 +1,6 @@
 from datetime import datetime
 
 import dagster
-import uuid
 
 class Partition:
 
@@ -33,8 +32,8 @@ class Partition:
         df = batch["data"]
         df[partition_column_name] = df[partition_by_column].apply(lambda x: datetime.fromtimestamp(x).strftime("%Y-%m-%d"))
 
-        #key = uuid.uuid4().hex
-        #yield dagster.DynamicOutput(batch, mapping_key=key)
+        batch["metadata"]["partition_column_name"] = partition_column_name
+
         return batch
 
     @dagster.op(
@@ -46,6 +45,6 @@ class Partition:
         df = batch["data"]
         df[partition_column_name] = df[partition_by_column].copy()
 
-        #key = uuid.uuid4().hex
-        #yield dagster.DynamicOutput(batch, mapping_key=key)
+        batch["metadata"]["partition_column_name"] = partition_column_name
+
         return batch
