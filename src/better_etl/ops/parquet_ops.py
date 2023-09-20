@@ -11,15 +11,6 @@ from better_etl.utils.compact import compact
 
 class Parquet:
 
-    def get_op_metadata(self):
-        return {
-            "compact": {
-                "return": {
-                    "dynamic": False
-                }
-            }
-        }
-
     @dagster.op(
         retry_policy=dagster.RetryPolicy(max_retries=2, delay=1, backoff=dagster.Backoff(dagster.Backoff.EXPONENTIAL))
     )

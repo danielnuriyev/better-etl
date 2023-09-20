@@ -50,15 +50,15 @@ ops:
       condition: >
         batch["data"].size > 0 and
         batch["data"].size < 1000000
-  - name: compact
+  - name: create_table
     after:
       - store_batches
     package: better_etl.ops
-    class: Parquet
-    method: compact
-    collect: True
+    class: AWSAthena
+    method: create_table
     config:
-      bucket: <my bucket>
+      recreate: True
+      bucket: <bucket>
       path: tables/$table/$t
-      max_memory: 4GiB
-      max_file_size : 128MiB
+      database: <db>
+      table: $table

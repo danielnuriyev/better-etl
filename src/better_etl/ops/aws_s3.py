@@ -8,15 +8,6 @@ from better_etl.ops.op_wrappers import condition
 
 class AWSS3:
 
-    def get_op_metadata(self):
-        return {
-            "store": {
-                "return": {
-                    "dynamic": False
-                }
-            }
-        }
-
     @dagster.op(
         retry_policy=dagster.RetryPolicy(max_retries=2, delay=1, backoff=dagster.Backoff(dagster.Backoff.EXPONENTIAL))
     )
@@ -27,7 +18,7 @@ class AWSS3:
 
         bucket = context.op_config["bucket"]
         path = context.op_config["path"]
-        partition = batch["metadata"]["partition_column_name"] # context.op_config.get("partition", None)
+        partition = batch["metadata"].get("partition_column_name", None)
 
         if bucket[-1] == "/": bucket = bucket[:-1]
         if path[0] == "/": path = path[1:]
