@@ -24,9 +24,6 @@ class MySQL:
     @condition
     def get_batches(context: dagster.OpExecutionContext, secret: typing.Dict):
 
-        context.log.info("IN BATCHES")
-        context.log.info(context.resources.cache)
-
         c = MySQLSource(
             host=context.op_config["host"],
             user=secret["username"],
@@ -39,14 +36,12 @@ class MySQL:
             cache=context.resources.cache
         )
 
-        context.log.info(c)
-        context.log.info(c.next_batch())
-
         max_matches = context.op_config.get("batches", None)
         batch_count = 0
 
         for batch in c.next_batch():
             key = "-".join(str(v) for v in batch["metadata"]["last_keys"].values())
+            context.log.info(batch["metadata"])
             yield dagster.DynamicOutput(batch, mapping_key=key)
             batch_count += 1
             if max_matches and batch_count >= max_matches:

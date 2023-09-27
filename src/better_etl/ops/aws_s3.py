@@ -64,4 +64,5 @@ class AWSS3:
             # yield dagster.DynamicOutput(batch, mapping_key=key)
             partitions.append(batch)
 
+        context.log.info(partitions)
         return partitions
