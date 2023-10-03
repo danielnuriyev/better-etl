@@ -33,14 +33,14 @@ class AWSAthena:
             if state == "SUCCEEDED":
                 get_status = False
             elif state == "FAILED":
-                raise f"Failed to execute {query}"
+                raise BaseException(f"Failed to execute {query}")
             else:
                 sleep += 1
 
             time.sleep(sleep)
             total_sleep += sleep
             if total_sleep > max_sleep:
-                raise f"Exceeded {max_sleep} seconds to execute {query}"
+                raise BaseException(f"Exceeded {max_sleep} seconds to execute {query}")
 
     def table_exists(self, database, table):
         try:
@@ -82,7 +82,7 @@ class AWSAthena:
                 for p in batch:
                     for column in p["metadata"]["columns"]:
                         name = column["Field"]
-                        type = column["Type"]
+                        type = column["Type"].replace("varchar", "string")
 
                         if name not in column2type:
                             column2type[name] = type
@@ -99,7 +99,7 @@ class AWSAthena:
 
             sql = f"""
                 CREATE TABLE {database}.{table} (
-                    {columns},
+                    {columns}
                   ) 
                 {partition}
                 LOCATION '{location}' 
@@ -109,14 +109,3 @@ class AWSAthena:
             """
             context.log.info(sql)
             athena.query(sql)
-
-
-    # @classmethod
-    @dagster.op(retry_policy=dagster.RetryPolicy(max_retries=2, delay=1, backoff=dagster.Backoff(dagster.Backoff.EXPONENTIAL)))
-    @condition
-    def drop_table(context: dagster.OpExecutionContext, args):
-
-        database = context.op_config["database"]
-        table = context.op_config["table"]
-
-        AWSAthena().drop_table(database, table)
